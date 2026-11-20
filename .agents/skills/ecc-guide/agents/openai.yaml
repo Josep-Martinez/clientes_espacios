@@ -1,0 +1,6 @@
+interface:
+  display_name: "ECC Guide"
+  short_description: "Guided navigation, discovery, and documentation for ECC features"
+  default_prompt: "Use $ecc-guide to explore available ECC capabilities, skills, and commands."
+policy:
+  allow_implicit_invocation: true

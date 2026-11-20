@@ -1,0 +1,6 @@
+interface:
+  display_name: "ECC Tools Cost Audit"
+  short_description: "Audit agent token usage and tool call cost efficiency"
+  default_prompt: "Use $ecc-tools-cost-audit to analyze tool efficiency and token consumption."
+policy:
+  allow_implicit_invocation: true

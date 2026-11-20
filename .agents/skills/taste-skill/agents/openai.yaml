@@ -1,0 +1,6 @@
+interface:
+  display_name: "Taste Skill"
+  short_description: "Anti-slop frontend design, layout, real photography, and web craft"
+  default_prompt: "Use $taste-skill to build or review high-craft, anti-slop frontend web pages."
+policy:
+  allow_implicit_invocation: true

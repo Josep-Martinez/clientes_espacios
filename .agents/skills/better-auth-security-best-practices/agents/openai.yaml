@@ -1,0 +1,6 @@
+interface:
+  display_name: "Better Auth Security"
+  short_description: "Auth security hardening: CSRF, session hijacking prevention, and rate limiting"
+  default_prompt: "Use $better-auth-security-best-practices to audit and harden authentication security."
+policy:
+  allow_implicit_invocation: true

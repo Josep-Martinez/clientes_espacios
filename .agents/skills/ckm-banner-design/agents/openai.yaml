@@ -1,0 +1,6 @@
+interface:
+  display_name: "Banner Design"
+  short_description: "High-converting web and marketing banner layouts and visual hierarchy"
+  default_prompt: "Use $banner-design to design high-converting banner and hero sections."
+policy:
+  allow_implicit_invocation: true

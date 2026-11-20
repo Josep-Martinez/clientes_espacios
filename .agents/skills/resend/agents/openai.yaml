@@ -1,0 +1,6 @@
+interface:
+  display_name: "Resend Email Service"
+  short_description: "Transactional email sending, domain verification, and email deliverability"
+  default_prompt: "Use $resend to send transactional confirmation, reminder, and receipt emails."
+policy:
+  allow_implicit_invocation: true

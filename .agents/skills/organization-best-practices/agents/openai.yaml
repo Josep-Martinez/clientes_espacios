@@ -1,0 +1,6 @@
+interface:
+  display_name: "Organization & RBAC Patterns"
+  short_description: "Multi-tenant organization structures, roles, permissions, and member management"
+  default_prompt: "Use $organization-best-practices to implement multi-role RBAC and organization schemas."
+policy:
+  allow_implicit_invocation: true

@@ -1,0 +1,6 @@
+interface:
+  display_name: "UI Styling"
+  short_description: "CSS/Tailwind styling patterns, animations, elevation, and visual refinement"
+  default_prompt: "Use $ui-styling to implement responsive styling, animations, and micro-interactions."
+policy:
+  allow_implicit_invocation: true

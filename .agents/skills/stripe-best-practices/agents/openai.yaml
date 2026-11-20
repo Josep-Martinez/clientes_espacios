@@ -1,0 +1,6 @@
+interface:
+  display_name: "Stripe Best Practices"
+  short_description: "Stripe integration guidelines, payment intents, and secure checkout patterns"
+  default_prompt: "Use $stripe-best-practices for Stripe SDK usage, PaymentIntents, and checkout security."
+policy:
+  allow_implicit_invocation: true

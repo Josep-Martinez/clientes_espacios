@@ -1,0 +1,6 @@
+interface:
+  display_name: "ECC Recipes"
+  short_description: "Command workflows and recipes for common development tasks"
+  default_prompt: "Use $ecc-recipes to find the recommended workflow pipeline for this task."
+policy:
+  allow_implicit_invocation: true

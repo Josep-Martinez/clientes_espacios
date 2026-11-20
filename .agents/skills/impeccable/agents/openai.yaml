@@ -1,0 +1,6 @@
+interface:
+  display_name: "Impeccable Design"
+  short_description: "Frontend design direction, hierarchy, motion, craft floor, and polish"
+  default_prompt: "Use $impeccable to shape, design, polish, or critique the frontend interface."
+policy:
+  allow_implicit_invocation: true

@@ -1,0 +1,6 @@
+interface:
+  display_name: "PostgreSQL Patterns"
+  short_description: "Advanced PostgreSQL patterns: ACID transactions, row locking, and concurrency"
+  default_prompt: "Use $postgres-patterns for database transactions, pessimistic locks, and queries."
+policy:
+  allow_implicit_invocation: true

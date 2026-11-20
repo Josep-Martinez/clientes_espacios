@@ -1,0 +1,77 @@
+{
+  "version": 2,
+  "skills": {
+    "better-auth-best-practices": {
+      "source": "better-auth/skills",
+      "commit": "20c9e88a5c007461a703f1c213572b073196113e",
+      "sourceType": "github",
+      "skillPath": "better-auth/best-practices/SKILL.md",
+      "computedHash": "2773c3687f2cf96d659049ebf2d8c86058a33541b09360712df0dc6b1404c403",
+      "installMode": "copy"
+    },
+    "better-auth-security-best-practices": {
+      "source": "better-auth/skills",
+      "commit": "20c9e88a5c007461a703f1c213572b073196113e",
+      "sourceType": "github",
+      "skillPath": "security/SKILL.md",
+      "computedHash": "36e9710eaa13c61c00bec00a4902fdc6ed829e6de13127238ae57494e93c1d9d",
+      "installMode": "copy"
+    },
+    "connect-recommend": {
+      "source": "stripe/ai",
+      "commit": "cfaab55a397fab873b2899f5b430bcf3527909c7",
+      "sourceType": "github",
+      "skillPath": "skills/connect-recommend/SKILL.md",
+      "computedHash": "1ca1d9a6e63405afa307edca5200e5286bf3224aff20af0b272f1a3cefa8bb61",
+      "installMode": "copy"
+    },
+    "organization-best-practices": {
+      "source": "better-auth/skills",
+      "commit": "20c9e88a5c007461a703f1c213572b073196113e",
+      "sourceType": "github",
+      "skillPath": "better-auth/organization/SKILL.md",
+      "computedHash": "e5b1238c3b62c789918fe397ed52787742e50944343de33f459629f29b0fe922",
+      "installMode": "copy"
+    },
+    "react-email": {
+      "source": "resend/react-email",
+      "commit": "beda35bb12cad36c202534601591cc98c651c8c9",
+      "sourceType": "github",
+      "skillPath": "skills/react-email/SKILL.md",
+      "computedHash": "a8c0238afbc32c6c279b5594cea69e11e53f591dec16bb60d8c77e26fb4bc672",
+      "installMode": "copy"
+    },
+    "resend": {
+      "source": "resend/resend-skills",
+      "commit": "063246e39987faebc2608f968ca13a02d994a0d4",
+      "sourceType": "github",
+      "skillPath": "skills/resend/SKILL.md",
+      "computedHash": "5d09dbdf01bc6d640f2340f24069307c53a7b58c6c94c1276932c22c3abc8cb1",
+      "installMode": "copy"
+    },
+    "stripe-best-practices": {
+      "source": "stripe/ai",
+      "commit": "cfaab55a397fab873b2899f5b430bcf3527909c7",
+      "sourceType": "github",
+      "skillPath": "skills/stripe-best-practices/SKILL.md",
+      "computedHash": "abf8e949bcbcc38081c03eb66b22e741c3cf1be6bae627546d711e6d32327a09",
+      "installMode": "copy"
+    },
+    "stripe-webhooks": {
+      "source": "hookdeck/webhook-skills",
+      "commit": "60c323851294d450f10e87fde68ca3ec5130a4a9",
+      "sourceType": "github",
+      "skillPath": "skills/stripe-webhooks/SKILL.md",
+      "computedHash": "5517286b16ce112ddf2e04713f8aab252430734a78538024d0f31f1421de5504",
+      "installMode": "copy"
+    },
+    "supabase-postgres-best-practices": {
+      "source": "supabase/agent-skills",
+      "commit": "c9be0e931b7930f7d02126d04774d904c381e7d7",
+      "sourceType": "github",
+      "skillPath": "skills/supabase-postgres-best-practices/SKILL.md",
+      "computedHash": "3eb972c2d7c818e544e35cc33ea8d7147d4d78ae08142ef40037b0fbac7a2505",
+      "installMode": "copy"
+    }
+  }
+}

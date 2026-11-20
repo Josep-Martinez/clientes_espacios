@@ -1,0 +1,6 @@
+interface:
+  display_name: "Slide Deck Design"
+  short_description: "Presentation decks, slide layouts, keynote styling, and visual storytelling"
+  default_prompt: "Use $slides to structure and design compelling slide presentations."
+policy:
+  allow_implicit_invocation: true

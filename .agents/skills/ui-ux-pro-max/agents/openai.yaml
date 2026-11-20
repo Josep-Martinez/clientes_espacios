@@ -1,0 +1,6 @@
+interface:
+  display_name: "UI/UX Pro Max"
+  short_description: "UI/UX design intelligence: 80 styles, 194 palettes, 74 font pairings, 130 UX guidelines"
+  default_prompt: "Use $ui-ux-pro-max for design styles, palettes, font pairings, and UI/UX reviews."
+policy:
+  allow_implicit_invocation: true

@@ -1,0 +1,6 @@
+interface:
+  display_name: "Better Auth Practices"
+  short_description: "Fullstack TypeScript authentication, session management, and multi-role RBAC"
+  default_prompt: "Use $better-auth-best-practices for auth routes, session cookies, and login flows."
+policy:
+  allow_implicit_invocation: true

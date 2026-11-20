@@ -1,0 +1,6 @@
+interface:
+  display_name: "Stripe Webhooks"
+  short_description: "Robust webhook handlers, signature verification, idempotency, and failure retry"
+  default_prompt: "Use $stripe-webhooks to implement resilient webhook event handlers and signature verification."
+policy:
+  allow_implicit_invocation: true

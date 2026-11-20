@@ -1,0 +1,6 @@
+interface:
+  display_name: "Marketplace Booking Engine"
+  short_description: "Availability calculation, geo-radius travel time, split payments, and booking concurrency"
+  default_prompt: "Use $marketplace-booking-engine to design or implement the availability, geo-scheduling, split-payments, or booking logic."
+policy:
+  allow_implicit_invocation: true

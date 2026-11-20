@@ -1,0 +1,6 @@
+interface:
+  display_name: "UI Design Assistant"
+  short_description: "Visual design decisions, layout composition, and interface aesthetic direction"
+  default_prompt: "Use $design to plan or review aesthetic and composition decisions."
+policy:
+  allow_implicit_invocation: true

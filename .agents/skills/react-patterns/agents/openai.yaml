@@ -1,0 +1,6 @@
+interface:
+  display_name: "React Patterns"
+  short_description: "Modern React patterns: hooks, component composition, and state management"
+  default_prompt: "Use $react-patterns to structure React components and state architectures."
+policy:
+  allow_implicit_invocation: true

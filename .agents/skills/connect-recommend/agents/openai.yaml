@@ -1,0 +1,6 @@
+interface:
+  display_name: "Stripe Connect Marketplace"
+  short_description: "Stripe Connect multi-party split payments, connected accounts, and payouts"
+  default_prompt: "Use $connect-recommend to architect marketplace payouts, transfers, and split charges."
+policy:
+  allow_implicit_invocation: true

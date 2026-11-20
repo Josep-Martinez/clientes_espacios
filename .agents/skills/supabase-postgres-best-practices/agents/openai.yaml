@@ -1,0 +1,6 @@
+interface:
+  display_name: "Supabase & Postgres Best Practices"
+  short_description: "PostgreSQL optimization, Row Level Security (RLS), indexes, and schema design"
+  default_prompt: "Use $supabase-postgres-best-practices for PostgreSQL schema design, indexing, and RLS."
+policy:
+  allow_implicit_invocation: true
