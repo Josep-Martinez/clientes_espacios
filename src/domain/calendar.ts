@@ -48,6 +48,25 @@ export function getCalendarMonthGrid(year: number, monthIndex: number, today: st
   });
 }
 
+export function getCalendarWeekDays(dateKey: string, today: string): CalendarDay[] {
+  if (!isValidDateKey(dateKey)) throw new RangeError('The selected date must be a valid YYYY-MM-DD date.');
+  if (!isValidDateKey(today)) throw new RangeError('Today must be a valid YYYY-MM-DD date.');
+
+  const selectedDate = new Date(dateKey + 'T12:00:00');
+  const mondayOffset = (selectedDate.getDay() + 6) % 7;
+  const firstDay = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate() - mondayOffset, 12);
+  return Array.from({ length: 7 }, (_, index) => {
+    const date = new Date(firstDay.getFullYear(), firstDay.getMonth(), firstDay.getDate() + index, 12);
+    const currentDateKey = toLocalDateKey(date);
+    return {
+      date: currentDateKey,
+      day: date.getDate(),
+      isCurrentMonth: date.getMonth() === selectedDate.getMonth(),
+      isToday: currentDateKey === today,
+    };
+  });
+}
+
 export function getAgendaEvents(bookings: readonly DemoBooking[], scope: AgendaScope): AgendaEvent[] {
   const spaceIds = new Set(scope.spaceIds ?? []);
   const hasScope = Boolean(scope.clientId || scope.professionalId || spaceIds.size);

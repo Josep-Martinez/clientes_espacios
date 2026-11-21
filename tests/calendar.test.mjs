@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { getAgendaEvents, getAgendaScope, getCalendarMonthGrid } from '../src/domain/calendar.ts';
+import { getAgendaEvents, getAgendaScope, getCalendarMonthGrid, getCalendarWeekDays } from '../src/domain/calendar.ts';
 import { getNavigationItems } from '../src/domain/navigation.ts';
 
 const booking = (overrides = {}) => ({
@@ -29,6 +29,24 @@ describe('calendar month grid', () => {
     assert.deepEqual(days[0], { date: '2026-10-26', day: 26, isCurrentMonth: false, isToday: false });
     assert.deepEqual(days[26], { date: '2026-11-21', day: 21, isCurrentMonth: true, isToday: true });
     assert.equal(days.at(-1).date, '2026-12-06');
+  });
+});
+
+describe('calendar week view', () => {
+  it('returns the Monday-to-Sunday week containing the selected date', () => {
+    const days = getCalendarWeekDays('2026-11-21', '2026-11-21');
+
+    assert.equal(days.length, 7);
+    assert.deepEqual(days.map(({ date }) => date), [
+      '2026-11-16',
+      '2026-11-17',
+      '2026-11-18',
+      '2026-11-19',
+      '2026-11-20',
+      '2026-11-21',
+      '2026-11-22',
+    ]);
+    assert.equal(days[5].isToday, true);
   });
 });
 

@@ -57,14 +57,14 @@ export function HowItWorksView() {
         <article className="how-role-card how-role-client">
           <span className="how-role-index">01 / CLIENTE</span>
           <h2>Encuentra y reserva.</h2>
-          <p>Busca una especialidad, revisa profesionales, compara salas y gimnasios, elige horas viables y gestiona tus reservas y conversaciones.</p>
-          <ul><li>Explorar sin cuenta</li><li>Pago de prueba con cuenta cliente</li><li>Solicitud de conversación al profesional</li></ul>
+          <p>Busca una especialidad, revisa profesionales, compara salas y gimnasios, elige horas viables y consulta tus reservas en la agenda.</p>
+          <ul><li>Explorar sin cuenta</li><li>Pago de prueba con cuenta cliente</li><li>Cancelación con aviso de posible coste</li><li>Solicitud de conversación al profesional</li></ul>
         </article>
         <article className="how-role-card how-role-professional">
           <span className="how-role-index">02 / PROFESIONAL</span>
           <h2>Consulta tu actividad.</h2>
-          <p>Revisa las reservas de tu calendario, define tus preferencias de trabajo y responde a solicitudes de conversación de clientes.</p>
-          <ul><li>Agenda en modo consulta</li><li>Preferencias de zona y desplazamiento</li><li>Sin buscar otros entrenadores</li></ul>
+          <p>Cambia entre vistas de mes, semana y día. Abre una sesión para ver los datos del cliente y la reserva; solicita cambios por mensajes con su participación.</p>
+          <ul><li>Agenda con vistas de mes, semana y día</li><li>Preferencias de zona y desplazamiento</li><li>Mensajes con clientes</li><li>Sin buscar otros entrenadores</li></ul>
         </article>
         <article className="how-role-card how-role-space">
           <span className="how-role-index">03 / GESTOR DE ESPACIO</span>
@@ -81,7 +81,7 @@ export function HowItWorksView() {
         </div>
         <div className="how-demo-limit-copy">
           <p>Los perfiles, precios, horarios, desplazamientos, conversaciones, comisiones e ingresos son datos de ejemplo. No se procesan pagos, no se publican mensajes reales y no se crean reservas con profesionales o espacios.</p>
-          <p>Los porcentajes, reembolsos, cambios, liquidaciones y condiciones comerciales siguen pendientes de definir. La primera entrada gratuita al gimnasio solo se representa como una regla de la demo.</p>
+          <p>Los porcentajes, reembolsos, costes y condiciones de cancelación, cambios, liquidaciones y condiciones comerciales siguen pendientes de definir. La primera entrada gratuita al gimnasio solo se representa como una regla de la demo.</p>
         </div>
       </section>
     </div>
