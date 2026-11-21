@@ -6,6 +6,7 @@ export interface DemoAccount {
   name: string;
   initials: string;
   role: DemoRole;
+  roles?: DemoRole[];
   roleLabel: string;
   description: string;
   professionalId?: string;
@@ -31,6 +32,17 @@ export const DEMO_ACCOUNTS: DemoAccount[] = [
     professionalId: 'marina-ortega',
   },
   {
+    id: 'demo-profesional-gestora-marina',
+    name: 'Marina Ortega',
+    initials: 'MO',
+    role: 'professional',
+    roles: ['professional', 'space'],
+    roleLabel: 'Profesional y gestora',
+    description: 'Gestiona su perfil profesional y un espacio desde la misma cuenta.',
+    professionalId: 'marina-ortega',
+    spaceIds: ['loft-rueda'],
+  },
+  {
     id: 'gestor-loft-rueda',
     name: 'Marta Soler',
     initials: 'MS',
@@ -40,6 +52,10 @@ export const DEMO_ACCOUNTS: DemoAccount[] = [
     spaceIds: ['loft-rueda'],
   },
 ];
+
+export function hasDemoRole(account: DemoAccount | null | undefined, role: DemoRole): boolean {
+  return Boolean(account && (account.roles ?? [account.role]).includes(role));
+}
 
 export function resolveDemoAccount(accountId: string | null | undefined): DemoAccount | null {
   if (!accountId?.trim()) return null;

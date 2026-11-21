@@ -1,4 +1,5 @@
 import type { DemoAccount } from '../data/demoAccounts.ts';
+import { hasDemoRole } from '../data/demoAccounts.ts';
 
 export type DemoHome = 'guest' | 'client' | 'professional' | 'space';
 
@@ -8,5 +9,5 @@ export function getDemoHomeForAccount(account: DemoAccount | null): DemoHome {
 }
 
 export function canSimulateClientPayment(account: DemoAccount | null): boolean {
-  return account?.role === 'client';
+  return hasDemoRole(account, 'client');
 }

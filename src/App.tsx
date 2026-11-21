@@ -1,11 +1,15 @@
-import { useState } from 'react';
-import { AppHeader, DemoNotice, type AppPage } from './components/AppChrome.tsx';
-import { canSimulateClientPayment, getDemoHomeForAccount } from './domain/demoAuth.ts';
-import { resolveDemoAccount, type DemoAccount } from './data/demoAccounts.ts';
-import { ClientView, type ClientSection } from './views/ClientView.tsx';
-import { ClientDirectoriesView } from './views/ClientDirectoriesView.tsx';
+import { useState, type ReactNode } from 'react';
+import { AppHeader, DemoNotice } from './components/AppChrome.tsx';
+import { canSimulateClientPayment } from './domain/demoAuth.ts';
+import { hasDemoRole, resolveDemoAccount, type DemoAccount } from './data/demoAccounts.ts';
+import type { AppPage } from './domain/navigation.ts';
+import { ClientProfessionalsView } from './views/ClientProfessionalsView.tsx';
+import { ClientSpacesView } from './views/ClientSpacesView.tsx';
+import { ClientView } from './views/ClientView.tsx';
 import { DemoLoginView } from './views/DemoLoginView.tsx';
 import { HowItWorksView } from './views/HowItWorksView.tsx';
+import { MessagesView } from './views/MessagesView.tsx';
+import { AgendaView } from './views/AgendaView.tsx';
 import { ProfessionalView } from './views/ProfessionalView.tsx';
 import { SpaceManagerView } from './views/SpaceManagerView.tsx';
 import { useDemoStore } from './state/useDemoStore.ts';
@@ -15,42 +19,99 @@ const GUEST_CLIENT_ID = 'visitante-demo';
 export default function App() {
   const demo = useDemoStore();
   const [activeAccount, setActiveAccount] = useState<DemoAccount | null>(null);
-  const [activePage, setActivePage] = useState<AppPage>('marketplace');
-  const [clientSection, setClientSection] = useState<ClientSection>('search');
+  const [activePage, setActivePage] = useState<AppPage>('explore');
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   const [loginOpen, setLoginOpen] = useState(false);
-  const demoHome = getDemoHomeForAccount(activeAccount);
+
+  const isClient = hasDemoRole(activeAccount, 'client');
+  const isProfessional = hasDemoRole(activeAccount, 'professional');
+  const isSpaceManager = hasDemoRole(activeAccount, 'space');
+  const currentClientId = isClient ? activeAccount?.id ?? GUEST_CLIENT_ID : GUEST_CLIENT_ID;
+  const currentClientName = isClient ? activeAccount?.name ?? 'Cliente' : 'Invitado';
 
   function login(accountId: string): void {
     const account = resolveDemoAccount(accountId);
     if (!account) return;
     setActiveAccount(account);
-    setActivePage('marketplace');
-    setClientSection('search');
+    setActivePage('explore');
     setSelectedConversationId(null);
     setLoginOpen(false);
   }
 
   function logout(): void {
     setActiveAccount(null);
-    setActivePage('marketplace');
-    setClientSection('search');
+    setActivePage('explore');
     setSelectedConversationId(null);
     setLoginOpen(false);
   }
 
   function changePage(page: AppPage): void {
     setActivePage(page);
-    if (page === 'marketplace') {
-      setClientSection('search');
-      setSelectedConversationId(null);
-    }
+    if (page !== 'messages') setSelectedConversationId(null);
   }
 
-  function openClientMessages(conversationId: string): void {
-    setClientSection('messages');
+  function openMessages(conversationId: string | null = null): void {
     setSelectedConversationId(conversationId);
-    setActivePage('marketplace');
+    setActivePage('messages');
+  }
+
+  function renderClientExplore(): ReactNode {
+    return (
+      <ClientView
+        canPay={canSimulateClientPayment(activeAccount)}
+        clientId={currentClientId}
+        clientName={currentClientName}
+        demo={demo}
+        onLoginRequest={() => setLoginOpen(true)}
+        onOpenAgenda={() => changePage(activeAccount ? 'agenda' : 'explore')}
+        professionalIdFilter={isProfessional ? activeAccount?.professionalId : undefined}
+      />
+    );
+  }
+
+  let pageContent: ReactNode;
+  switch (activePage) {
+    case 'professionals':
+      pageContent = (
+        <ClientProfessionalsView
+          canContact={isClient}
+          clientId={currentClientId}
+          clientName={currentClientName}
+          demo={demo}
+          onLoginRequest={() => setLoginOpen(true)}
+          onOpenMessages={(conversationId) => openMessages(conversationId)}
+        />
+      );
+      break;
+    case 'space-directory':
+      pageContent = <ClientSpacesView onOpenSearch={() => changePage('explore')} />;
+      break;
+    case 'profile':
+      pageContent = isProfessional && activeAccount?.professionalId
+        ? <ProfessionalView demo={demo} professionalId={activeAccount.professionalId} />
+        : renderClientExplore();
+      break;
+    case 'my-space':
+      pageContent = isSpaceManager
+        ? <SpaceManagerView demo={demo} spaceIds={activeAccount?.spaceIds ?? []} />
+        : renderClientExplore();
+      break;
+    case 'agenda':
+      pageContent = activeAccount
+        ? <AgendaView account={activeAccount} demo={demo} onOpenMessages={openMessages} onOpenSpace={() => changePage('my-space')} />
+        : renderClientExplore();
+      break;
+    case 'messages':
+      pageContent = activeAccount && (isClient || isProfessional)
+        ? <MessagesView account={activeAccount} demo={demo} initialConversationId={selectedConversationId} />
+        : renderClientExplore();
+      break;
+    case 'how-it-works':
+      pageContent = <HowItWorksView />;
+      break;
+    case 'explore':
+    default:
+      pageContent = renderClientExplore();
   }
 
   return (
@@ -60,8 +121,8 @@ export default function App() {
         account={activeAccount}
         activePage={activePage}
         onOpenLogin={() => setLoginOpen(true)}
+        onOpenMessages={() => openMessages()}
         onPageChange={changePage}
-        onReset={demo.resetDemo}
       />
       <main id="contenido" className="app-content">
         <DemoNotice>
@@ -70,35 +131,7 @@ export default function App() {
         {demo.storageUnavailable && (
           <p className="storage-message" role="status">El navegador no permite guardar esta demo; los cambios se mantienen solo mientras la página esté abierta.</p>
         )}
-        {activePage === 'how-it-works'
-          ? <HowItWorksView />
-          : activePage === 'directory'
-            ? <ClientDirectoriesView
-                canContact={canSimulateClientPayment(activeAccount)}
-                clientId={demoHome === 'client' ? activeAccount?.id ?? GUEST_CLIENT_ID : GUEST_CLIENT_ID}
-                clientName={demoHome === 'client' ? activeAccount?.name ?? 'Invitado' : 'Invitado'}
-                demo={demo}
-                showProfessionals={activeAccount?.role !== 'professional'}
-                onLoginRequest={() => setLoginOpen(true)}
-                onOpenMessages={openClientMessages}
-                onOpenSearch={activeAccount?.role === 'professional' || activeAccount?.role === 'space'
-                  ? undefined
-                  : () => changePage('marketplace')}
-              />
-            : demoHome === 'professional' && activeAccount?.professionalId
-            ? <ProfessionalView demo={demo} professionalId={activeAccount?.professionalId ?? ''} />
-            : demoHome === 'space'
-              ? <SpaceManagerView demo={demo} spaceIds={activeAccount?.spaceIds ?? []} />
-              : <ClientView
-                  activeSection={clientSection}
-                  canPay={canSimulateClientPayment(activeAccount)}
-                  clientId={demoHome === 'client' ? activeAccount?.id ?? GUEST_CLIENT_ID : GUEST_CLIENT_ID}
-                  clientName={demoHome === 'client' ? activeAccount?.name ?? 'Invitado' : 'Invitado'}
-                  demo={demo}
-                  selectedConversationId={selectedConversationId}
-                  onLoginRequest={() => setLoginOpen(true)}
-                  onActiveSectionChange={setClientSection}
-                />}
+        {pageContent}
       </main>
       <footer className="app-footer">
         <span>Trama · concepto de marketplace</span>

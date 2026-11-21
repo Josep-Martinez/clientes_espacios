@@ -21,10 +21,8 @@ import { hasConfirmedGymVisit, resolveCheckoutPayment } from '../domain/reservat
 import { searchServices, type PublicServiceResult } from '../domain/search.ts';
 import { type DemoStore } from '../state/useDemoStore.ts';
 import { createConfirmedDemoBooking, makeOccurrence, makeWaitlistEntry } from '../state/demoState.ts';
-import { AccessNote, formatMoney, MoneyBreakdown, OccurrenceLine, ServiceResultRow } from '../components/BookingPieces.tsx';
-import { ConversationInbox } from '../components/ConversationInbox.tsx';
+import { formatMoney, MoneyBreakdown, ServiceResultRow } from '../components/BookingPieces.tsx';
 import { BookingThread } from '../components/AppChrome.tsx';
-import { getConversationsForUser } from '../domain/conversations.ts';
 
 type ClientFlow = 'individual' | 'gym' | 'group';
 
@@ -90,33 +88,15 @@ function getClassRows(service: DemoService, date: string, demo: DemoStore) {
     });
 }
 
-export type ClientSection = 'search' | 'messages' | 'bookings';
-
-function LoginRequiredPanel({ title, onLogin }: { title: string; onLogin: () => void }) {
-  return (
-    <div className="login-required-panel">
-      <span className="login-required-mark" aria-hidden="true">↗</span>
-      <div>
-        <span className="eyebrow">CUENTA CLIENTE</span>
-        <h2>{title}</h2>
-        <p>Explora sin cuenta. Inicia sesión con la cuenta cliente demo para guardar esta actividad y continuar.</p>
-      </div>
-      <button className="primary-button" onClick={onLogin} type="button">Iniciar sesión</button>
-    </div>
-  );
-}
-
-export function ClientView({ demo, clientId, clientName, canPay, onLoginRequest, activeSection, onActiveSectionChange, selectedConversationId }: {
+export function ClientView({ demo, clientId, clientName, canPay, onLoginRequest, onOpenAgenda, professionalIdFilter }: {
   demo: DemoStore;
   clientId: string;
   clientName: string;
   canPay: boolean;
   onLoginRequest: () => void;
-  activeSection: ClientSection;
-  onActiveSectionChange: (section: ClientSection) => void;
-  selectedConversationId?: string | null;
+  onOpenAgenda: () => void;
+  professionalIdFilter?: string;
 }) {
-  const setActiveSection = onActiveSectionChange;
   const [flow, setFlow] = useState<ClientFlow>('individual');
   const [query, setQuery] = useState('');
   const [areaLocationId, setAreaLocationId] = useState('ruzafa');
@@ -143,6 +123,7 @@ export function ClientView({ demo, clientId, clientName, canPay, onLoginRequest,
       distanceKm: simulatedDistanceKm,
     });
     return all.filter((item) => {
+      if (professionalIdFilter && item.professional.id !== professionalIdFilter) return false;
       const itemProfessional = DEMO_PROFESSIONALS.find((candidate) => candidate.id === item.professional.id);
       if (!itemProfessional) return false;
       const itemPreferences = demo.state.preferencesByProfessional[itemProfessional.id] ?? itemProfessional.preferences;
@@ -152,7 +133,7 @@ export function ClientView({ demo, clientId, clientName, canPay, onLoginRequest,
       if (flow === 'individual') return enabledModalities.some((mode) => mode !== 'gym');
       return enabledModalities.length > 0;
     });
-  }, [areaLocationId, demo.state.preferencesByProfessional, flow, query, resultFormat]);
+  }, [areaLocationId, demo.state.preferencesByProfessional, flow, professionalIdFilter, query, resultFormat]);
 
   const selectedResult = serviceResults.find((item) => item.service.id === selectedServiceId) ?? null;
   const selectedService = selectedResult?.service ?? null;
@@ -381,28 +362,14 @@ export function ClientView({ demo, clientId, clientName, canPay, onLoginRequest,
     setFeedback('Reserva confirmada en esta demo. El cambio ya aparece en las vistas profesional y de espacio.');
   }
 
-  const ownBookings = demo.state.bookings.filter((booking) => booking.clientId === clientId);
-  const ownWaitlist = demo.state.waitlist.filter((entry) => entry.clientId === clientId);
-  const ownConversations = getConversationsForUser(demo.state.conversations, clientId);
-  const pendingConversationCount = ownConversations.filter((conversation) => conversation.status === 'pending').length;
-
   return (
     <div className="client-view" id="inicio">
-      {canPay && <nav className="client-section-nav" aria-label="Área de cliente">
-        <button aria-pressed={activeSection === 'messages'} className={activeSection === 'messages' ? 'client-section-tab is-active' : 'client-section-tab'} onClick={() => setActiveSection('messages')} type="button">
-          Mensajes{pendingConversationCount > 0 && <span className="nav-count">{pendingConversationCount}</span>}
-        </button>
-        <button aria-pressed={activeSection === 'bookings'} className={activeSection === 'bookings' ? 'client-section-tab is-active' : 'client-section-tab'} onClick={() => setActiveSection('bookings')} type="button">
-          Mis reservas{ownBookings.length > 0 && <span className="nav-count">{ownBookings.length}</span>}
-        </button>
-      </nav>}
-
-      {activeSection === 'search' && (
-        <>
       <section className="client-hero">
         <div className="client-hero-copy">
-          <h1>Encuentra tu sesión.<br /><span>El lugar también.</span></h1>
-          <p>Elige un servicio, una zona y una fecha. Trama cruza las horas viables con profesionales y espacios compatibles.</p>
+          <h1>{professionalIdFilter ? <>Así se ve tu perfil.<br /><span>Explora tus sesiones.</span></> : <>Encuentra tu sesión.<br /><span>El lugar también.</span></>}</h1>
+          <p>{professionalIdFilter
+            ? 'Consulta tus servicios publicados y sus horarios visibles. Esta vista profesional no muestra otros entrenadores.'
+            : 'Elige un servicio, una zona y una fecha. Trama cruza las horas viables con profesionales y espacios compatibles.'}</p>
           <div className="hero-meta-line">
             <span>Perfiles ficticios</span>
             <span>·</span>
@@ -711,7 +678,7 @@ export function ClientView({ demo, clientId, clientName, canPay, onLoginRequest,
                     <h3>Reserva confirmada en la demo</h3>
                     <p>{feedback}</p>
                   </div>
-                  <button className="text-button" onClick={() => setActiveSection('bookings')} type="button">Ver mis reservas</button>
+                  <button className="text-button" onClick={onOpenAgenda} type="button">Ver mi agenda</button>
                 </div>
               )}
             </div>
@@ -721,106 +688,6 @@ export function ClientView({ demo, clientId, clientName, canPay, onLoginRequest,
 
       {selectedService?.format === 'group' && (
         <p className="group-waitlist-note">Si una clase está completa, la lista de espera no cobra ni bloquea una plaza. La ventana de acceso cuando se libera una plaza sigue pendiente.</p>
-      )}
-        </>
-      )}
-
-      {activeSection === 'messages' && (
-        <section className="client-messages-section" aria-labelledby="client-messages-title">
-          <div className="directory-heading">
-            <div>
-              <span className="eyebrow">CONTACTO EN TRAMA</span>
-              <h1 id="client-messages-title">Tus conversaciones.</h1>
-              <p>Solicita contacto desde un perfil. El chat se habilita cuando el profesional acepta.</p>
-            </div>
-            <span className="fake-data-label">Solo clientes y profesionales</span>
-          </div>
-          {canPay ? <ConversationInbox
-            conversations={ownConversations}
-            currentUserId={clientId}
-            initialConversationId={selectedConversationId}
-            onSendMessage={(conversationId, body) => demo.sendConversationMessage({
-              id: createDemoId('mensaje'),
-              conversationId,
-              senderId: clientId,
-              body,
-              createdAt: new Date().toISOString(),
-            })}
-            onStatusChange={() => undefined}
-            role="client"
-          /> : <LoginRequiredPanel title="Inicia sesión para ver tus mensajes." onLogin={onLoginRequest} />}
-        </section>
-      )}
-
-      {activeSection === 'bookings' && (
-      canPay ? (
-      <section className="my-bookings" id="mis-reservas" aria-labelledby="my-bookings-title">
-        <div className="section-title-row">
-          <div>
-            <h2 id="my-bookings-title">Mis reservas</h2>
-            <p>Las confirmaciones y cambios demo aparecen también en los otros perfiles.</p>
-          </div>
-          <span className="fake-data-label">{ownBookings.length} reserva{ownBookings.length === 1 ? '' : 's'}</span>
-        </div>
-        {ownBookings.length ? (
-          <div className="my-booking-list">
-            {ownBookings.map((booking) => {
-              const service = DEMO_SERVICES.find((item) => item.id === booking.serviceId);
-              const provider = DEMO_PROFESSIONALS.find((item) => item.id === booking.professionalId);
-              return (
-                <article className="my-booking" key={booking.id}>
-                  <div className="my-booking-heading">
-                    <div>
-                      <h3>{service?.name ?? 'Servicio demo'}</h3>
-                      <p>{provider?.name} · {booking.seats > 1 ? `${booking.seats} plazas` : '1 plaza'} · {booking.seriesId ? 'Serie finita' : 'Fecha única'}</p>
-                    </div>
-                    <span className="confirmed-chip">Pago demo · confirmada</span>
-                  </div>
-                  <div className="occurrences-list">
-                    {booking.occurrences.map((occurrence) => (
-                      <div className="occurrence-card" key={occurrence.id}>
-                        <OccurrenceLine occurrence={occurrence} service={service} />
-                        {occurrence.status === 'confirmed' && (
-                          <button className="cancel-link" onClick={() => {
-                            demo.cancelOccurrence(booking.id, occurrence.id);
-                            setFeedback('Se canceló solo esta fecha. La política y cualquier reembolso siguen pendientes y se simulan.');
-                          }} type="button">Cancelar esta fecha</button>
-                        )}
-                        {occurrence.status === 'confirmed' && <AccessNote booking={booking} occurrence={occurrence} spaces={DEMO_SPACES} />}
-                        {occurrence.status === 'cancelled' && (
-                          <p className="cancelled-note">Solo se ha cancelado esta fecha. La política y el posible efecto económico están pendientes y se simulan.</p>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </article>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="empty-state compact-empty">
-            <h3>Aún no hay reservas para este cliente demo</h3>
-            <p>Completa un pago de prueba correcto para ver la confirmación en esta lista y en los otros perfiles.</p>
-          </div>
-        )}
-        {ownWaitlist.length > 0 && (
-          <div className="waitlist-list">
-            <h3>Lista de espera</h3>
-            {ownWaitlist.map((entry) => {
-              const session = DEMO_CLASS_SESSIONS.find((item) => item.id === entry.sessionId);
-              const service = DEMO_SERVICES.find((item) => item.id === entry.serviceId);
-              return (
-                <div className="waitlist-entry" key={entry.id}>
-                  <span>{service?.name} · {formatDateLabel(entry.date)} · {entry.seats} plaza{entry.seats === 1 ? '' : 's'}</span>
-                  <strong>En espera · 0 € · ninguna plaza retenida</strong>
-                  <small>{session ? formatTime(session.start) : ''}</small>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </section>
-      ) : <LoginRequiredPanel title="Inicia sesión para guardar y consultar tus reservas." onLogin={onLoginRequest} />
       )}
       <p className="pending-decisions-note">{DEMO_DECISIONS_NOTICE}</p>
     </div>

@@ -9,7 +9,6 @@ import {
 } from '../domain/conversations.ts';
 import {
   cancelDemoBookingOccurrence,
-  createInitialDemoState,
   readDemoState,
   saveDemoState,
   updateProfessionalPreferences,
@@ -25,7 +24,6 @@ export interface DemoStore {
   sendConversationMessage: (message: NewConversationMessage) => void;
   cancelOccurrence: (bookingId: string, occurrenceId: string) => void;
   updatePreferences: (professionalId: string, value: ProfessionalPreferences) => void;
-  resetDemo: () => void;
 }
 
 export function useDemoStore(): DemoStore {
@@ -87,10 +85,6 @@ export function useDemoStore(): DemoStore {
     }));
   }
 
-  function resetDemo(): void {
-    setState(createInitialDemoState());
-  }
-
   return {
     state,
     storageUnavailable,
@@ -101,6 +95,5 @@ export function useDemoStore(): DemoStore {
     sendConversationMessage,
     cancelOccurrence,
     updatePreferences,
-    resetDemo,
   };
 }

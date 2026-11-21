@@ -11,6 +11,8 @@ describe('simulated demo accounts', () => {
   it('resolves only a known demo account', () => {
     assert.equal(resolveDemoAccount('cliente-trama-demo')?.role, 'client');
     assert.equal(resolveDemoAccount('demo-profesional-marina')?.professionalId, 'marina-ortega');
+    assert.deepEqual(resolveDemoAccount('demo-profesional-gestora-marina')?.roles, ['professional', 'space']);
+    assert.equal(resolveDemoAccount('demo-profesional-gestora-marina')?.spaceIds?.includes('loft-rueda'), true);
     assert.equal(resolveDemoAccount('gestor-loft-rueda')?.spaceIds.includes('loft-rueda'), true);
     assert.equal(resolveDemoAccount('admin-real'), null);
     assert.equal(resolveDemoAccount(''), null);
@@ -31,6 +33,7 @@ describe('simulated demo accounts', () => {
     assert.equal(canSimulateClientPayment(null), false);
     assert.equal(canSimulateClientPayment(resolveDemoAccount('demo-profesional-marina')), false);
     assert.equal(canSimulateClientPayment(resolveDemoAccount('gestor-loft-rueda')), false);
+    assert.equal(canSimulateClientPayment(resolveDemoAccount('demo-profesional-gestora-marina')), false);
     assert.equal(canSimulateClientPayment(resolveDemoAccount('cliente-trama-demo')), true);
   });
 });
