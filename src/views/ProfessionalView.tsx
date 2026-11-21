@@ -1,14 +1,23 @@
 import { useMemo, useState } from 'react';
 import { PageHeading } from '../components/AppChrome.tsx';
-import { formatDateLabel, formatTime, DEMO_LOCATIONS, DEMO_PROFESSIONALS, DEMO_SERVICES } from '../data/demoData.ts';
+import { formatDateLabel, formatTime, getDefaultSearchDate, DEMO_LOCATIONS, DEMO_PROFESSIONALS, DEMO_SERVICES } from '../data/demoData.ts';
 import type { BookingMode, ProfessionalPreferences } from '../domain/models.ts';
 import { DEMO_BOOKING_MODE_LABELS } from '../data/demoConfig.ts';
+import { getConversationsForUser } from '../domain/conversations.ts';
 import type { DemoStore } from '../state/useDemoStore.ts';
+import { ConversationInbox } from '../components/ConversationInbox.tsx';
 
 const modalityChoices: BookingMode[] = ['room', 'gym', 'home', 'online'];
 
-export function ProfessionalView({ demo }: { demo: DemoStore }) {
-  const [professionalId, setProfessionalId] = useState(DEMO_PROFESSIONALS[0]?.id ?? '');
+function createMessageId(): string {
+  const token = typeof crypto !== 'undefined' && 'randomUUID' in crypto
+    ? crypto.randomUUID()
+    : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  return `mensaje-${token}`;
+}
+
+export function ProfessionalView({ demo, professionalId }: { demo: DemoStore; professionalId: string }) {
+  const [selectedDate, setSelectedDate] = useState(getDefaultSearchDate);
   const professional = DEMO_PROFESSIONALS.find((item) => item.id === professionalId);
   const preferences = professional
     ? demo.state.preferencesByProfessional[professional.id] ?? professional.preferences
@@ -17,10 +26,13 @@ export function ProfessionalView({ demo }: { demo: DemoStore }) {
     .filter((booking) => booking.professionalId === professionalId)
     .flatMap((booking) => {
       const service = DEMO_SERVICES.find((item) => item.id === booking.serviceId);
-      return booking.occurrences.map((occurrence) => ({ booking, occurrence, service }));
+      return booking.occurrences
+        .filter((occurrence) => occurrence.date === selectedDate)
+        .map((occurrence) => ({ booking, occurrence, service }));
     })
     .sort((a, b) => `${a.occurrence.date}-${a.occurrence.start}`.localeCompare(`${b.occurrence.date}-${b.occurrence.start}`)),
-  [demo.state.bookings, professionalId]);
+  [demo.state.bookings, professionalId, selectedDate]);
+  const conversations = getConversationsForUser(demo.state.conversations, professionalId);
 
   function updatePreferences(patch: Partial<ProfessionalPreferences>): void {
     if (!professional || !preferences) return;
@@ -40,7 +52,7 @@ export function ProfessionalView({ demo }: { demo: DemoStore }) {
       <div className="role-intro-grid">
         <PageHeading
           title="Tu agenda, con margen para moverte."
-          description="Ajusta tus preferencias de trabajo. La demo solo ofrece al cliente las horas que encajan con agenda, desplazamiento y espacio."
+          description="Consulta tus reservas y responde a clientes. Esta vista es de solo lectura: no se cambian citas sin la participación del cliente."
         />
         <div className="role-summary-card professional-summary">
           <span className="eyebrow">PREFERENCIAS DE MUESTRA</span>
@@ -61,12 +73,6 @@ export function ProfessionalView({ demo }: { demo: DemoStore }) {
             <span className="demo-tag">Editable en esta sesión</span>
           </div>
           <div className="form-grid">
-            <div className="field field-wide">
-              <label htmlFor="professional-profile">Perfil profesional</label>
-              <select id="professional-profile" onChange={(event) => setProfessionalId(event.currentTarget.value)} value={professionalId}>
-                {DEMO_PROFESSIONALS.map((item) => <option key={item.id} value={item.id}>{item.name} · {item.headline}</option>)}
-              </select>
-            </div>
             <div className="field">
               <label htmlFor="professional-base">Ubicación base</label>
               <select id="professional-base" onChange={(event) => updatePreferences({ baseLocationId: event.currentTarget.value })} value={preferences?.baseLocationId ?? ''}>
@@ -129,11 +135,18 @@ export function ProfessionalView({ demo }: { demo: DemoStore }) {
       <section className="role-bookings-section" aria-labelledby="professional-bookings-title">
         <div className="section-title-row">
           <div>
-            <span className="eyebrow">AGENDA COMPARTIDA</span>
-            <h2 id="professional-bookings-title">Reservas simuladas</h2>
-            <p>Los pagos demo correctos aparecen aquí al instante. Las fechas canceladas se mantienen identificadas.</p>
+            <span className="eyebrow">TU CALENDARIO</span>
+            <h2 id="professional-bookings-title">Agenda · {formatDateLabel(selectedDate, { weekday: 'long', day: 'numeric', month: 'long' })}</h2>
+            <p>Consulta las citas de ese día. Para mover una reserva hace falta la participación del cliente.</p>
           </div>
           <span className="fake-data-label">{bookings.filter(({ occurrence }) => occurrence.status === 'confirmed').length} confirmadas</span>
+        </div>
+        <div className="calendar-toolbar">
+          <label className="field" htmlFor="professional-date">
+            <span>Consultar fecha</span>
+            <input id="professional-date" onChange={(event) => { if (event.currentTarget.value) setSelectedDate(event.currentTarget.value); }} type="date" value={selectedDate} />
+          </label>
+          <span className="read-only-label">Solo consulta · sin cambios de cita</span>
         </div>
         {bookings.length ? (
           <div className="professional-booking-list">
@@ -155,6 +168,30 @@ export function ProfessionalView({ demo }: { demo: DemoStore }) {
           <div className="empty-state compact-empty"><h3>Sin reservas para este perfil</h3><p>Prueba un pago correcto desde la vista Cliente para ver cómo aparece aquí.</p></div>
         )}
         <p className="pending-decisions-note">Los importes, tiempos y condiciones que aparecen aquí son ficticios. No se genera ninguna cita operativa.</p>
+      </section>
+
+      <section className="professional-messages-section" aria-labelledby="professional-messages-title">
+        <div className="directory-heading">
+          <div>
+            <span className="eyebrow">CONTACTO CON CLIENTES</span>
+            <h2 id="professional-messages-title">Solicitudes y conversaciones.</h2>
+            <p>Los clientes piden contacto desde su cuenta. Acepta la solicitud para abrir el chat.</p>
+          </div>
+          <span className="fake-data-label">Sin búsqueda de otros profesionales</span>
+        </div>
+        <ConversationInbox
+          conversations={conversations}
+          currentUserId={professionalId}
+          onSendMessage={(conversationId, body) => demo.sendConversationMessage({
+            id: createMessageId(),
+            conversationId,
+            senderId: professionalId,
+            body,
+            createdAt: new Date().toISOString(),
+          })}
+          onStatusChange={(conversationId, status) => demo.updateConversationStatus(conversationId, professionalId, status)}
+          role="professional"
+        />
       </section>
     </div>
   );

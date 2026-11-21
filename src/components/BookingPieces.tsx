@@ -40,7 +40,6 @@ export function ServiceResultRow({
 
 export function MoneyBreakdown({
   quote,
-  service,
   occurrenceCount,
   seats,
   showSpace,
@@ -50,7 +49,6 @@ export function MoneyBreakdown({
   spacePercent,
 }: {
   quote: CheckoutQuote;
-  service: DemoService;
   occurrenceCount: number;
   seats: number;
   showSpace: boolean;

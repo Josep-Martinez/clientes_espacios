@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { DEMO_CLIENT_ID, DEMO_CLIENT_NAME, DEMO_CUSTOMER_AREA_RADIUS_KM, DEMO_DECISIONS_NOTICE, DEMO_FEES, DEMO_TIME_LABEL } from '../data/demoConfig.ts';
+import { DEMO_CUSTOMER_AREA_RADIUS_KM, DEMO_DECISIONS_NOTICE, DEMO_FEES, DEMO_TIME_LABEL } from '../data/demoConfig.ts';
 import {
   DEMO_CLASS_SESSIONS,
   DEMO_LOCATIONS,
@@ -22,7 +22,9 @@ import { searchServices, type PublicServiceResult } from '../domain/search.ts';
 import { type DemoStore } from '../state/useDemoStore.ts';
 import { createConfirmedDemoBooking, makeOccurrence, makeWaitlistEntry } from '../state/demoState.ts';
 import { AccessNote, formatMoney, MoneyBreakdown, OccurrenceLine, ServiceResultRow } from '../components/BookingPieces.tsx';
-import { BookingThread, PageHeading } from '../components/AppChrome.tsx';
+import { ConversationInbox } from '../components/ConversationInbox.tsx';
+import { BookingThread } from '../components/AppChrome.tsx';
+import { getConversationsForUser } from '../domain/conversations.ts';
 
 type ClientFlow = 'individual' | 'gym' | 'group';
 
@@ -88,7 +90,33 @@ function getClassRows(service: DemoService, date: string, demo: DemoStore) {
     });
 }
 
-export function ClientView({ demo }: { demo: DemoStore }) {
+export type ClientSection = 'search' | 'messages' | 'bookings';
+
+function LoginRequiredPanel({ title, onLogin }: { title: string; onLogin: () => void }) {
+  return (
+    <div className="login-required-panel">
+      <span className="login-required-mark" aria-hidden="true">↗</span>
+      <div>
+        <span className="eyebrow">CUENTA CLIENTE</span>
+        <h2>{title}</h2>
+        <p>Explora sin cuenta. Inicia sesión con la cuenta cliente demo para guardar esta actividad y continuar.</p>
+      </div>
+      <button className="primary-button" onClick={onLogin} type="button">Iniciar sesión</button>
+    </div>
+  );
+}
+
+export function ClientView({ demo, clientId, clientName, canPay, onLoginRequest, activeSection, onActiveSectionChange, selectedConversationId }: {
+  demo: DemoStore;
+  clientId: string;
+  clientName: string;
+  canPay: boolean;
+  onLoginRequest: () => void;
+  activeSection: ClientSection;
+  onActiveSectionChange: (section: ClientSection) => void;
+  selectedConversationId?: string | null;
+}) {
+  const setActiveSection = onActiveSectionChange;
   const [flow, setFlow] = useState<ClientFlow>('individual');
   const [query, setQuery] = useState('');
   const [areaLocationId, setAreaLocationId] = useState('ruzafa');
@@ -138,9 +166,6 @@ export function ClientView({ demo }: { demo: DemoStore }) {
     ? getClassRows(selectedService, searchDate, demo)
     : [];
   const selectedClassRows = selectedClasses.filter((row) => selectedClassIds.includes(row.session.id));
-  const maxSelectedSeats = selectedClassRows.length
-    ? Math.min(...selectedClassRows.map((row) => row.remainingSeats))
-    : Math.max(1, Math.min(selectedService?.groupCapacity ?? 1, ...selectedClasses.filter((row) => row.remainingSeats > 0).map((row) => row.remainingSeats)));
   const individualOptions = selectedService && professional && preferences && selectedService.format === 'individual'
     && preferences.modalities.includes(selectedMode)
     ? getBookingOptions({
@@ -176,7 +201,7 @@ export function ClientView({ demo }: { demo: DemoStore }) {
   const occurrenceCount = selectedService?.format === 'group' ? selectedClassRows.length : 1;
   const quoteSeats = selectedService?.format === 'group' ? seats : 1;
   const isNewAtGym = selectedMode === 'gym' && selectedSpaceId
-    ? !hasConfirmedGymVisit(demo.state.bookings, DEMO_CLIENT_ID, selectedSpaceId)
+    ? !hasConfirmedGymVisit(demo.state.bookings, clientId, selectedSpaceId)
     : false;
   const quote = selectedService
     ? calculateCheckout({
@@ -262,12 +287,16 @@ export function ClientView({ demo }: { demo: DemoStore }) {
   }
 
   function joinClassWaitlist(session: DemoClassSession): void {
+    if (!canPay) {
+      onLoginRequest();
+      return;
+    }
     const row = selectedClasses.find((item) => item.session.id === session.id);
     if (!row) return;
     const id = createDemoId('espera');
     const entry = joinWaitlist(
       [],
-      { id, clientId: DEMO_CLIENT_ID, sessionId: session.id },
+      { id, clientId, sessionId: session.id },
       { capacity: session.capacity, confirmedSeats: row.confirmedSeats },
     );
     if (!entry) return;
@@ -292,6 +321,7 @@ export function ClientView({ demo }: { demo: DemoStore }) {
           start: row.session.start,
           end: row.session.end,
           locationId: row.space?.locationId ?? 'online',
+          spaceAmountCents: row.space?.pricePerOccurrenceCents ?? 0,
         }))
       : selectedTimeOption
         ? [makeOccurrence({
@@ -304,13 +334,14 @@ export function ClientView({ demo }: { demo: DemoStore }) {
               : selectedMode === 'home'
                 ? areaLocationId
                 : 'online',
+          spaceAmountCents: showSpace && !isNewAtGym ? selectedSpace?.pricePerOccurrenceCents ?? 0 : 0,
           })]
         : [];
     if (!occurrences.length) return null;
     return {
       id: createDemoId('reserva'),
-      clientId: DEMO_CLIENT_ID,
-      clientName: DEMO_CLIENT_NAME,
+      clientId,
+      clientName,
       professionalId: professional.id,
       serviceId: selectedService.id,
       spaceId: selectedService.format === 'group'
@@ -324,13 +355,17 @@ export function ClientView({ demo }: { demo: DemoStore }) {
   }
 
   function simulatePayment(outcome: 'success' | 'failure'): void {
+    if (!canPay) {
+      onLoginRequest();
+      return;
+    }
     const draft = createDraftBooking();
     if (!draft) return;
 
     if (outcome === 'failure') {
       const failed = resolveCheckoutPayment({
         outcome: 'failure',
-        draft: { ...draft, occurrences: draft.occurrences.map((occurrence) => ({ ...occurrence, status: 'pending' as const })) },
+        draft: { id: draft.id, occurrences: draft.occurrences.map((occurrence) => ({ ...occurrence, status: 'pending' as const })) },
       });
       setPaymentResult('failure');
       setFeedback(failed.booking === null
@@ -346,11 +381,24 @@ export function ClientView({ demo }: { demo: DemoStore }) {
     setFeedback('Reserva confirmada en esta demo. El cambio ya aparece en las vistas profesional y de espacio.');
   }
 
-  const ownBookings = demo.state.bookings.filter((booking) => booking.clientId === DEMO_CLIENT_ID);
-  const ownWaitlist = demo.state.waitlist.filter((entry) => entry.clientId === DEMO_CLIENT_ID);
+  const ownBookings = demo.state.bookings.filter((booking) => booking.clientId === clientId);
+  const ownWaitlist = demo.state.waitlist.filter((entry) => entry.clientId === clientId);
+  const ownConversations = getConversationsForUser(demo.state.conversations, clientId);
+  const pendingConversationCount = ownConversations.filter((conversation) => conversation.status === 'pending').length;
 
   return (
     <div className="client-view" id="inicio">
+      {canPay && <nav className="client-section-nav" aria-label="Área de cliente">
+        <button aria-pressed={activeSection === 'messages'} className={activeSection === 'messages' ? 'client-section-tab is-active' : 'client-section-tab'} onClick={() => setActiveSection('messages')} type="button">
+          Mensajes{pendingConversationCount > 0 && <span className="nav-count">{pendingConversationCount}</span>}
+        </button>
+        <button aria-pressed={activeSection === 'bookings'} className={activeSection === 'bookings' ? 'client-section-tab is-active' : 'client-section-tab'} onClick={() => setActiveSection('bookings')} type="button">
+          Mis reservas{ownBookings.length > 0 && <span className="nav-count">{ownBookings.length}</span>}
+        </button>
+      </nav>}
+
+      {activeSection === 'search' && (
+        <>
       <section className="client-hero">
         <div className="client-hero-copy">
           <h1>Encuentra tu sesión.<br /><span>El lugar también.</span></h1>
@@ -632,7 +680,6 @@ export function ClientView({ demo }: { demo: DemoStore }) {
                     occurrenceCount={Math.max(1, occurrenceCount)}
                     quote={quote}
                     seats={quoteSeats}
-                    service={selectedService}
                     servicePercent={DEMO_FEES.serviceCommissionPercent}
                     showSpace={showSpace}
                     spaceLabel={selectedMode === 'gym' ? 'Acceso al gimnasio' : 'Uso del espacio'}
@@ -640,10 +687,20 @@ export function ClientView({ demo }: { demo: DemoStore }) {
                   />
                   <p className="checkout-demo-warning">No se cobra dinero real. El resultado solo sirve para probar el recorrido; no confirma una cita operativa.</p>
                   {paymentResult === 'failure' && <p className="payment-error" role="alert">{feedback}</p>}
-                  <div className="payment-actions">
-                    <button className="primary-button" onClick={() => simulatePayment('success')} type="button">Simular pago correcto</button>
-                    <button className="secondary-button" onClick={() => simulatePayment('failure')} type="button">Simular pago fallido</button>
-                  </div>
+                  {canPay ? (
+                    <div className="payment-actions">
+                      <button className="primary-button" onClick={() => simulatePayment('success')} type="button">Simular pago correcto</button>
+                      <button className="secondary-button" onClick={() => simulatePayment('failure')} type="button">Simular pago fallido</button>
+                    </div>
+                  ) : (
+                    <div className="login-checkout-gate">
+                      <div>
+                        <strong>El checkout está listo.</strong>
+                        <span>Inicia sesión con la cuenta cliente para probar el resultado del pago.</span>
+                      </div>
+                      <button className="primary-button" onClick={onLoginRequest} type="button">Iniciar sesión para pagar</button>
+                    </div>
+                  )}
                 </section>
               )}
 
@@ -654,7 +711,7 @@ export function ClientView({ demo }: { demo: DemoStore }) {
                     <h3>Reserva confirmada en la demo</h3>
                     <p>{feedback}</p>
                   </div>
-                  <a className="text-button" href="#mis-reservas">Ver mis reservas</a>
+                  <button className="text-button" onClick={() => setActiveSection('bookings')} type="button">Ver mis reservas</button>
                 </div>
               )}
             </div>
@@ -665,7 +722,38 @@ export function ClientView({ demo }: { demo: DemoStore }) {
       {selectedService?.format === 'group' && (
         <p className="group-waitlist-note">Si una clase está completa, la lista de espera no cobra ni bloquea una plaza. La ventana de acceso cuando se libera una plaza sigue pendiente.</p>
       )}
+        </>
+      )}
 
+      {activeSection === 'messages' && (
+        <section className="client-messages-section" aria-labelledby="client-messages-title">
+          <div className="directory-heading">
+            <div>
+              <span className="eyebrow">CONTACTO EN TRAMA</span>
+              <h1 id="client-messages-title">Tus conversaciones.</h1>
+              <p>Solicita contacto desde un perfil. El chat se habilita cuando el profesional acepta.</p>
+            </div>
+            <span className="fake-data-label">Solo clientes y profesionales</span>
+          </div>
+          {canPay ? <ConversationInbox
+            conversations={ownConversations}
+            currentUserId={clientId}
+            initialConversationId={selectedConversationId}
+            onSendMessage={(conversationId, body) => demo.sendConversationMessage({
+              id: createDemoId('mensaje'),
+              conversationId,
+              senderId: clientId,
+              body,
+              createdAt: new Date().toISOString(),
+            })}
+            onStatusChange={() => undefined}
+            role="client"
+          /> : <LoginRequiredPanel title="Inicia sesión para ver tus mensajes." onLogin={onLoginRequest} />}
+        </section>
+      )}
+
+      {activeSection === 'bookings' && (
+      canPay ? (
       <section className="my-bookings" id="mis-reservas" aria-labelledby="my-bookings-title">
         <div className="section-title-row">
           <div>
@@ -732,6 +820,8 @@ export function ClientView({ demo }: { demo: DemoStore }) {
           </div>
         )}
       </section>
+      ) : <LoginRequiredPanel title="Inicia sesión para guardar y consultar tus reservas." onLogin={onLoginRequest} />
+      )}
       <p className="pending-decisions-note">{DEMO_DECISIONS_NOTICE}</p>
     </div>
   );

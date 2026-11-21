@@ -1,25 +1,19 @@
 import { useMemo, useState } from 'react';
-import { AccessNote } from '../components/BookingPieces.tsx';
+import { AccessNote, formatMoney } from '../components/BookingPieces.tsx';
 import { PageHeading } from '../components/AppChrome.tsx';
-import { DEMO_CLASS_SESSIONS, DEMO_LOCATIONS, DEMO_PROFESSIONALS, DEMO_SERVICES, DEMO_SPACES, formatDateLabel, formatTime, getDefaultSearchDate } from '../data/demoData.ts';
-import type { DemoBookingOccurrence } from '../domain/models.ts';
+import { DEMO_CLASS_SESSIONS, DEMO_LOCATIONS, DEMO_PROFESSIONALS, DEMO_SERVICES, DEMO_SPACES, addDaysToDate, formatDateLabel, formatTime, getDefaultSearchDate } from '../data/demoData.ts';
+import { calculateSpaceMetrics } from '../domain/spaceMetrics.ts';
+import { DEMO_FEES } from '../data/demoConfig.ts';
 import type { DemoStore } from '../state/useDemoStore.ts';
-
-interface SpaceReservationRow {
-  bookingId: string;
-  booking: NonNullable<DemoStore['state']['bookings'][number]>;
-  occurrence: DemoBookingOccurrence;
-  serviceName: string;
-  professionalName: string;
-}
 
 function dateInputValue(): string {
   return getDefaultSearchDate();
 }
 
-export function SpaceManagerView({ demo }: { demo: DemoStore }) {
+export function SpaceManagerView({ demo, spaceIds }: { demo: DemoStore; spaceIds: string[] }) {
   const [selectedDate, setSelectedDate] = useState(dateInputValue);
   const [selectedKind, setSelectedKind] = useState<'all' | 'room' | 'gym'>('all');
+  const ownedSpaces = useMemo(() => DEMO_SPACES.filter((space) => spaceIds.includes(space.id)), [spaceIds]);
 
   const reservationsBySpace = useMemo(() => {
     const rows = demo.state.bookings.flatMap((booking) => {
@@ -36,29 +30,69 @@ export function SpaceManagerView({ demo }: { demo: DemoStore }) {
           professionalName: professional?.name ?? 'Profesional demo',
         }));
     });
-    return new Map(DEMO_SPACES.map((space) => [space.id, rows
+    return new Map(ownedSpaces.map((space) => [space.id, rows
       .filter((row) => row.booking.spaceId === space.id)
       .sort((a, b) => a.occurrence.start - b.occurrence.start)]));
-  }, [demo.state.bookings, selectedDate]);
+  }, [demo.state.bookings, ownedSpaces, selectedDate]);
 
-  const spaces = DEMO_SPACES.filter((space) => selectedKind === 'all' || space.kind === selectedKind);
+  const spaces = ownedSpaces.filter((space) => selectedKind === 'all' || space.kind === selectedKind);
   const confirmedCount = [...reservationsBySpace.values()].reduce((sum, rows) => sum + rows.length, 0);
-  const waitlistForDate = demo.state.waitlist.filter((entry) => entry.date === selectedDate);
+  const metrics = calculateSpaceMetrics({
+    spaces: ownedSpaces,
+    bookings: demo.state.bookings,
+    startDate: selectedDate,
+    endDateExclusive: addDaysToDate(selectedDate, 30),
+    spaceCommissionPercent: DEMO_FEES.spaceCommissionPercent,
+  });
 
   return (
     <div className="role-view space-view" id="inicio">
       <div className="role-intro-grid">
         <PageHeading
-          title="Cada espacio, en su sitio."
-          description="Explora el inventario ficticio, revisa disponibilidad y comprueba cómo una reserva demo ocupa sala o aforo."
+          title="Tu espacio, a la vista."
+          description="Consulta el calendario de tu instalación, revisa cuánto se está usando y mira una estimación de ingresos."
         />
         <div className="role-summary-card space-summary">
-          <span className="eyebrow">INVENTARIO DE MUESTRA</span>
-          <strong>{DEMO_SPACES.length.toString().padStart(2, '0')}</strong>
-          <span>salas y gimnasios ficticios</span>
+          <span className="eyebrow">TU INVENTARIO</span>
+          <strong>{ownedSpaces.length.toString().padStart(2, '0')}</strong>
+          <span>espacio{ownedSpaces.length === 1 ? '' : 's'} asociado{ownedSpaces.length === 1 ? '' : 's'} a esta cuenta</span>
           <div className="inventory-mini-bars" aria-hidden="true"><i /><i /><i /><i /><i /></div>
         </div>
       </div>
+
+      <section className="space-metrics-section" aria-labelledby="space-metrics-title">
+        <div className="section-title-row">
+          <div>
+            <span className="eyebrow">PRÓXIMOS 30 DÍAS DESDE LA FECHA ELEGIDA</span>
+            <h2 id="space-metrics-title">Uso e ingresos aproximados</h2>
+            <p>Solo cuenta reservas confirmadas de los espacios vinculados a tu cuenta.</p>
+          </div>
+          <span className="fake-data-label">Tarifas ficticias</span>
+        </div>
+        <div className="space-metrics-grid">
+          <article className="space-metric-card">
+            <span>Reservas confirmadas</span>
+            <strong>{metrics.confirmedOccurrences}</strong>
+            <small>en el periodo seleccionado</small>
+          </article>
+          <article className="space-metric-card">
+            <span>Tiempo reservado</span>
+            <strong>{(metrics.bookedMinutes / 60).toLocaleString('es-ES', { maximumFractionDigits: 1 })} h</strong>
+            <small>de {(metrics.openMinutes / 60).toLocaleString('es-ES', { maximumFractionDigits: 0 })} h disponibles</small>
+          </article>
+          <article className="space-metric-card">
+            <span>Uso de agenda</span>
+            <strong>{metrics.utilizationPercent}%</strong>
+            <small>según el horario de apertura demo</small>
+          </article>
+          <article className="space-metric-card space-metric-earnings">
+            <span>Ingreso neto estimado</span>
+            <strong>{formatMoney(metrics.estimatedOwnerEarningsCents)}</strong>
+            <small>{formatMoney(metrics.grossEarningsCents)} brutos · comisión demo {DEMO_FEES.spaceCommissionPercent}%</small>
+          </article>
+        </div>
+        <p className="pending-decisions-note">Estimación orientativa: las comisiones, entradas gratuitas, cancelaciones y liquidaciones finales siguen pendientes de definición.</p>
+      </section>
 
       <section className="space-controls" aria-label="Filtros de inventario">
         <div className="space-date-intro">
@@ -69,7 +103,7 @@ export function SpaceManagerView({ demo }: { demo: DemoStore }) {
         <div className="space-date-controls">
           <div className="field">
             <label htmlFor="space-date">Consultar fecha</label>
-            <input id="space-date" onChange={(event) => setSelectedDate(event.currentTarget.value)} type="date" value={selectedDate} />
+            <input id="space-date" onChange={(event) => { if (event.currentTarget.value) setSelectedDate(event.currentTarget.value); }} type="date" value={selectedDate} />
           </div>
           <div className="field">
             <label htmlFor="space-kind">Tipo de espacio</label>
@@ -154,6 +188,12 @@ export function SpaceManagerView({ demo }: { demo: DemoStore }) {
             </article>
           );
         })}
+        {!spaces.length && (
+          <div className="empty-state compact-empty">
+            <h3>No tienes espacios en este filtro</h3>
+            <p>Prueba con otro tipo de espacio. Esta cuenta solo muestra el inventario que tiene asignado.</p>
+          </div>
+        )}
       </section>
       <p className="pending-decisions-note">La disponibilidad, capacidad, precios e instrucciones de acceso son ficticios. Los accesos solo aparecen junto a reservas confirmadas y están marcados como muestra.</p>
     </div>

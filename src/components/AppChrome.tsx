@@ -1,45 +1,56 @@
 import type { ReactNode } from 'react';
 import { Icon } from './Icon.tsx';
+import type { DemoAccount } from '../data/demoAccounts.ts';
 
-export type DemoRole = 'client' | 'professional' | 'space';
-
-const roleLabels: Record<DemoRole, string> = {
-  client: 'Cliente',
-  professional: 'Profesional',
-  space: 'Gestor de espacio',
-};
+export type AppPage = 'marketplace' | 'directory' | 'how-it-works';
 
 export function AppHeader({
-  activeRole,
-  onRoleChange,
+  account,
+  activePage,
+  onPageChange,
+  onOpenLogin,
   onReset,
 }: {
-  activeRole: DemoRole;
-  onRoleChange: (role: DemoRole) => void;
+  account: DemoAccount | null;
+  activePage: AppPage;
+  onPageChange: (page: AppPage) => void;
+  onOpenLogin: () => void;
   onReset: () => void;
 }) {
+  const workspaceLabel = account?.role === 'professional'
+    ? 'Mi agenda'
+    : account?.role === 'space'
+      ? 'Mi espacio'
+      : 'Buscar y reservar';
+
   return (
     <header className="app-header">
       <a className="brand" href="#inicio" aria-label="Trama, inicio de la demo">
         <span className="brand-symbol"><Icon name="mark" size={28} /></span>
         <span className="brand-name">trama</span>
       </a>
-      <nav className="role-switcher" aria-label="Cambiar vista de demostración">
-        {(Object.keys(roleLabels) as DemoRole[]).map((role) => (
-          <button
-            aria-pressed={activeRole === role}
-            className={activeRole === role ? 'role-tab is-active' : 'role-tab'}
-            key={role}
-            onClick={() => onRoleChange(role)}
-            type="button"
-          >
-            {roleLabels[role]}
-          </button>
-        ))}
+      <nav className="site-navigation" aria-label="Navegación principal">
+        <button aria-current={activePage === 'marketplace' ? 'page' : undefined} className={activePage === 'marketplace' ? 'site-nav-link is-active' : 'site-nav-link'} onClick={() => onPageChange('marketplace')} type="button">
+          {workspaceLabel}
+        </button>
+        <button aria-current={activePage === 'directory' ? 'page' : undefined} className={activePage === 'directory' ? 'site-nav-link is-active' : 'site-nav-link'} onClick={() => onPageChange('directory')} type="button">
+          {account?.role === 'professional' ? 'Explorar espacios' : 'Explorar profesionales y espacios'}
+        </button>
+        <button aria-current={activePage === 'how-it-works' ? 'page' : undefined} className={activePage === 'how-it-works' ? 'site-nav-link is-active' : 'site-nav-link'} onClick={() => onPageChange('how-it-works')} type="button">
+          Cómo funciona
+        </button>
       </nav>
-      <button className="reset-button" onClick={onReset} type="button">
-        Reiniciar demo
-      </button>
+      <div className="header-session">
+        <button className="profile-button" onClick={onOpenLogin} type="button">
+          <span className="header-avatar" aria-hidden="true">{account?.initials ?? <Icon name="person" size={20} />}</span>
+          <span className="header-session-copy">
+            <span>{account ? account.roleLabel : 'Tu perfil'}</span>
+            <strong>{account ? account.name : 'Iniciar sesión'}</strong>
+          </span>
+          <span className="profile-button-chevron" aria-hidden="true">⌄</span>
+        </button>
+        {account && <button className="reset-button" onClick={onReset} type="button">Reiniciar demo</button>}
+      </div>
     </header>
   );
 }
