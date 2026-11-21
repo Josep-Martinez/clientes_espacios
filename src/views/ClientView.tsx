@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { DEMO_CLIENT_ID, DEMO_CLIENT_NAME, DEMO_CUSTOMER_AREA_RADIUS_KM, DEMO_DECISIONS_NOTICE, DEMO_FEES, DEMO_TIME_LABEL } from '../data/demoConfig.ts';
+import { DEMO_CUSTOMER_AREA_RADIUS_KM, DEMO_DECISIONS_NOTICE, DEMO_FEES, DEMO_TIME_LABEL } from '../data/demoConfig.ts';
 import {
   DEMO_CLASS_SESSIONS,
   DEMO_LOCATIONS,
@@ -21,8 +21,8 @@ import { hasConfirmedGymVisit, resolveCheckoutPayment } from '../domain/reservat
 import { searchServices, type PublicServiceResult } from '../domain/search.ts';
 import { type DemoStore } from '../state/useDemoStore.ts';
 import { createConfirmedDemoBooking, makeOccurrence, makeWaitlistEntry } from '../state/demoState.ts';
-import { AccessNote, formatMoney, MoneyBreakdown, OccurrenceLine, ServiceResultRow } from '../components/BookingPieces.tsx';
-import { BookingThread, PageHeading } from '../components/AppChrome.tsx';
+import { formatMoney, MoneyBreakdown, ServiceResultRow } from '../components/BookingPieces.tsx';
+import { BookingThread } from '../components/AppChrome.tsx';
 
 type ClientFlow = 'individual' | 'gym' | 'group';
 
@@ -88,7 +88,15 @@ function getClassRows(service: DemoService, date: string, demo: DemoStore) {
     });
 }
 
-export function ClientView({ demo }: { demo: DemoStore }) {
+export function ClientView({ demo, clientId, clientName, canPay, onLoginRequest, onOpenAgenda, professionalIdFilter }: {
+  demo: DemoStore;
+  clientId: string;
+  clientName: string;
+  canPay: boolean;
+  onLoginRequest: () => void;
+  onOpenAgenda: () => void;
+  professionalIdFilter?: string;
+}) {
   const [flow, setFlow] = useState<ClientFlow>('individual');
   const [query, setQuery] = useState('');
   const [areaLocationId, setAreaLocationId] = useState('ruzafa');
@@ -115,6 +123,7 @@ export function ClientView({ demo }: { demo: DemoStore }) {
       distanceKm: simulatedDistanceKm,
     });
     return all.filter((item) => {
+      if (professionalIdFilter && item.professional.id !== professionalIdFilter) return false;
       const itemProfessional = DEMO_PROFESSIONALS.find((candidate) => candidate.id === item.professional.id);
       if (!itemProfessional) return false;
       const itemPreferences = demo.state.preferencesByProfessional[itemProfessional.id] ?? itemProfessional.preferences;
@@ -124,7 +133,7 @@ export function ClientView({ demo }: { demo: DemoStore }) {
       if (flow === 'individual') return enabledModalities.some((mode) => mode !== 'gym');
       return enabledModalities.length > 0;
     });
-  }, [areaLocationId, demo.state.preferencesByProfessional, flow, query, resultFormat]);
+  }, [areaLocationId, demo.state.preferencesByProfessional, flow, professionalIdFilter, query, resultFormat]);
 
   const selectedResult = serviceResults.find((item) => item.service.id === selectedServiceId) ?? null;
   const selectedService = selectedResult?.service ?? null;
@@ -138,9 +147,6 @@ export function ClientView({ demo }: { demo: DemoStore }) {
     ? getClassRows(selectedService, searchDate, demo)
     : [];
   const selectedClassRows = selectedClasses.filter((row) => selectedClassIds.includes(row.session.id));
-  const maxSelectedSeats = selectedClassRows.length
-    ? Math.min(...selectedClassRows.map((row) => row.remainingSeats))
-    : Math.max(1, Math.min(selectedService?.groupCapacity ?? 1, ...selectedClasses.filter((row) => row.remainingSeats > 0).map((row) => row.remainingSeats)));
   const individualOptions = selectedService && professional && preferences && selectedService.format === 'individual'
     && preferences.modalities.includes(selectedMode)
     ? getBookingOptions({
@@ -176,7 +182,7 @@ export function ClientView({ demo }: { demo: DemoStore }) {
   const occurrenceCount = selectedService?.format === 'group' ? selectedClassRows.length : 1;
   const quoteSeats = selectedService?.format === 'group' ? seats : 1;
   const isNewAtGym = selectedMode === 'gym' && selectedSpaceId
-    ? !hasConfirmedGymVisit(demo.state.bookings, DEMO_CLIENT_ID, selectedSpaceId)
+    ? !hasConfirmedGymVisit(demo.state.bookings, clientId, selectedSpaceId)
     : false;
   const quote = selectedService
     ? calculateCheckout({
@@ -262,12 +268,16 @@ export function ClientView({ demo }: { demo: DemoStore }) {
   }
 
   function joinClassWaitlist(session: DemoClassSession): void {
+    if (!canPay) {
+      onLoginRequest();
+      return;
+    }
     const row = selectedClasses.find((item) => item.session.id === session.id);
     if (!row) return;
     const id = createDemoId('espera');
     const entry = joinWaitlist(
       [],
-      { id, clientId: DEMO_CLIENT_ID, sessionId: session.id },
+      { id, clientId, sessionId: session.id },
       { capacity: session.capacity, confirmedSeats: row.confirmedSeats },
     );
     if (!entry) return;
@@ -292,6 +302,7 @@ export function ClientView({ demo }: { demo: DemoStore }) {
           start: row.session.start,
           end: row.session.end,
           locationId: row.space?.locationId ?? 'online',
+          spaceAmountCents: row.space?.pricePerOccurrenceCents ?? 0,
         }))
       : selectedTimeOption
         ? [makeOccurrence({
@@ -304,13 +315,14 @@ export function ClientView({ demo }: { demo: DemoStore }) {
               : selectedMode === 'home'
                 ? areaLocationId
                 : 'online',
+          spaceAmountCents: showSpace && !isNewAtGym ? selectedSpace?.pricePerOccurrenceCents ?? 0 : 0,
           })]
         : [];
     if (!occurrences.length) return null;
     return {
       id: createDemoId('reserva'),
-      clientId: DEMO_CLIENT_ID,
-      clientName: DEMO_CLIENT_NAME,
+      clientId,
+      clientName,
       professionalId: professional.id,
       serviceId: selectedService.id,
       spaceId: selectedService.format === 'group'
@@ -324,13 +336,17 @@ export function ClientView({ demo }: { demo: DemoStore }) {
   }
 
   function simulatePayment(outcome: 'success' | 'failure'): void {
+    if (!canPay) {
+      onLoginRequest();
+      return;
+    }
     const draft = createDraftBooking();
     if (!draft) return;
 
     if (outcome === 'failure') {
       const failed = resolveCheckoutPayment({
         outcome: 'failure',
-        draft: { ...draft, occurrences: draft.occurrences.map((occurrence) => ({ ...occurrence, status: 'pending' as const })) },
+        draft: { id: draft.id, occurrences: draft.occurrences.map((occurrence) => ({ ...occurrence, status: 'pending' as const })) },
       });
       setPaymentResult('failure');
       setFeedback(failed.booking === null
@@ -346,15 +362,14 @@ export function ClientView({ demo }: { demo: DemoStore }) {
     setFeedback('Reserva confirmada en esta demo. El cambio ya aparece en las vistas profesional y de espacio.');
   }
 
-  const ownBookings = demo.state.bookings.filter((booking) => booking.clientId === DEMO_CLIENT_ID);
-  const ownWaitlist = demo.state.waitlist.filter((entry) => entry.clientId === DEMO_CLIENT_ID);
-
   return (
     <div className="client-view" id="inicio">
       <section className="client-hero">
         <div className="client-hero-copy">
-          <h1>Encuentra tu sesión.<br /><span>El lugar también.</span></h1>
-          <p>Elige un servicio, una zona y una fecha. Trama cruza las horas viables con profesionales y espacios compatibles.</p>
+          <h1>{professionalIdFilter ? <>Así se ve tu perfil.<br /><span>Explora tus sesiones.</span></> : <>Encuentra tu sesión.<br /><span>El lugar también.</span></>}</h1>
+          <p>{professionalIdFilter
+            ? 'Consulta tus servicios publicados y sus horarios visibles. Esta vista profesional no muestra otros entrenadores.'
+            : 'Elige un servicio, una zona y una fecha. Trama cruza las horas viables con profesionales y espacios compatibles.'}</p>
           <div className="hero-meta-line">
             <span>Perfiles ficticios</span>
             <span>·</span>
@@ -632,7 +647,6 @@ export function ClientView({ demo }: { demo: DemoStore }) {
                     occurrenceCount={Math.max(1, occurrenceCount)}
                     quote={quote}
                     seats={quoteSeats}
-                    service={selectedService}
                     servicePercent={DEMO_FEES.serviceCommissionPercent}
                     showSpace={showSpace}
                     spaceLabel={selectedMode === 'gym' ? 'Acceso al gimnasio' : 'Uso del espacio'}
@@ -640,10 +654,20 @@ export function ClientView({ demo }: { demo: DemoStore }) {
                   />
                   <p className="checkout-demo-warning">No se cobra dinero real. El resultado solo sirve para probar el recorrido; no confirma una cita operativa.</p>
                   {paymentResult === 'failure' && <p className="payment-error" role="alert">{feedback}</p>}
-                  <div className="payment-actions">
-                    <button className="primary-button" onClick={() => simulatePayment('success')} type="button">Simular pago correcto</button>
-                    <button className="secondary-button" onClick={() => simulatePayment('failure')} type="button">Simular pago fallido</button>
-                  </div>
+                  {canPay ? (
+                    <div className="payment-actions">
+                      <button className="primary-button" onClick={() => simulatePayment('success')} type="button">Simular pago correcto</button>
+                      <button className="secondary-button" onClick={() => simulatePayment('failure')} type="button">Simular pago fallido</button>
+                    </div>
+                  ) : (
+                    <div className="login-checkout-gate">
+                      <div>
+                        <strong>El checkout está listo.</strong>
+                        <span>Inicia sesión con la cuenta cliente para probar el resultado del pago.</span>
+                      </div>
+                      <button className="primary-button" onClick={onLoginRequest} type="button">Iniciar sesión para pagar</button>
+                    </div>
+                  )}
                 </section>
               )}
 
@@ -654,7 +678,7 @@ export function ClientView({ demo }: { demo: DemoStore }) {
                     <h3>Reserva confirmada en la demo</h3>
                     <p>{feedback}</p>
                   </div>
-                  <a className="text-button" href="#mis-reservas">Ver mis reservas</a>
+                  <button className="text-button" onClick={onOpenAgenda} type="button">Ver mi agenda</button>
                 </div>
               )}
             </div>
@@ -665,73 +689,6 @@ export function ClientView({ demo }: { demo: DemoStore }) {
       {selectedService?.format === 'group' && (
         <p className="group-waitlist-note">Si una clase está completa, la lista de espera no cobra ni bloquea una plaza. La ventana de acceso cuando se libera una plaza sigue pendiente.</p>
       )}
-
-      <section className="my-bookings" id="mis-reservas" aria-labelledby="my-bookings-title">
-        <div className="section-title-row">
-          <div>
-            <h2 id="my-bookings-title">Mis reservas</h2>
-            <p>Las confirmaciones y cambios demo aparecen también en los otros perfiles.</p>
-          </div>
-          <span className="fake-data-label">{ownBookings.length} reserva{ownBookings.length === 1 ? '' : 's'}</span>
-        </div>
-        {ownBookings.length ? (
-          <div className="my-booking-list">
-            {ownBookings.map((booking) => {
-              const service = DEMO_SERVICES.find((item) => item.id === booking.serviceId);
-              const provider = DEMO_PROFESSIONALS.find((item) => item.id === booking.professionalId);
-              return (
-                <article className="my-booking" key={booking.id}>
-                  <div className="my-booking-heading">
-                    <div>
-                      <h3>{service?.name ?? 'Servicio demo'}</h3>
-                      <p>{provider?.name} · {booking.seats > 1 ? `${booking.seats} plazas` : '1 plaza'} · {booking.seriesId ? 'Serie finita' : 'Fecha única'}</p>
-                    </div>
-                    <span className="confirmed-chip">Pago demo · confirmada</span>
-                  </div>
-                  <div className="occurrences-list">
-                    {booking.occurrences.map((occurrence) => (
-                      <div className="occurrence-card" key={occurrence.id}>
-                        <OccurrenceLine occurrence={occurrence} service={service} />
-                        {occurrence.status === 'confirmed' && (
-                          <button className="cancel-link" onClick={() => {
-                            demo.cancelOccurrence(booking.id, occurrence.id);
-                            setFeedback('Se canceló solo esta fecha. La política y cualquier reembolso siguen pendientes y se simulan.');
-                          }} type="button">Cancelar esta fecha</button>
-                        )}
-                        {occurrence.status === 'confirmed' && <AccessNote booking={booking} occurrence={occurrence} spaces={DEMO_SPACES} />}
-                        {occurrence.status === 'cancelled' && (
-                          <p className="cancelled-note">Solo se ha cancelado esta fecha. La política y el posible efecto económico están pendientes y se simulan.</p>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </article>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="empty-state compact-empty">
-            <h3>Aún no hay reservas para este cliente demo</h3>
-            <p>Completa un pago de prueba correcto para ver la confirmación en esta lista y en los otros perfiles.</p>
-          </div>
-        )}
-        {ownWaitlist.length > 0 && (
-          <div className="waitlist-list">
-            <h3>Lista de espera</h3>
-            {ownWaitlist.map((entry) => {
-              const session = DEMO_CLASS_SESSIONS.find((item) => item.id === entry.sessionId);
-              const service = DEMO_SERVICES.find((item) => item.id === entry.serviceId);
-              return (
-                <div className="waitlist-entry" key={entry.id}>
-                  <span>{service?.name} · {formatDateLabel(entry.date)} · {entry.seats} plaza{entry.seats === 1 ? '' : 's'}</span>
-                  <strong>En espera · 0 € · ninguna plaza retenida</strong>
-                  <small>{session ? formatTime(session.start) : ''}</small>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </section>
       <p className="pending-decisions-note">{DEMO_DECISIONS_NOTICE}</p>
     </div>
   );

@@ -1,7 +1,7 @@
 import { DEMO_CLASS_SESSIONS, DEMO_GROUP_SEAT_COUNTS, DEMO_PROFESSIONALS, DEMO_SERVICES, DEMO_SPACES, addDaysToDate, getDefaultSearchDate } from '../data/demoData.ts';
 import { DEMO_CLIENT_ID, DEMO_STORAGE_KEY } from '../data/demoConfig.ts';
-import type { DemoBooking, DemoBookingOccurrence, DemoState, DemoWaitlistEntry, ProfessionalPreferences } from '../domain/models.ts';
-import { cancelOccurrence, resolveCheckoutPayment } from '../domain/reservations.ts';
+import type { DemoBooking, DemoBookingOccurrence, DemoConversation, DemoConversationMessage, DemoState, DemoWaitlistEntry, ProfessionalPreferences } from '../domain/models.ts';
+import { resolveCheckoutPayment } from '../domain/reservations.ts';
 
 const DEMO_GROUP_CLIENT_ID = 'asistentes-grupo-demo';
 const DEMO_GROUP_CLIENT_NAME = 'Participantes demo';
@@ -34,6 +34,7 @@ function makeSeedGroupBooking(sessionId: string, seats: number): DemoBooking | n
       end: session.end,
       status: 'confirmed',
       locationId: getSpaceLocation(session.spaceId),
+      spaceAmountCents: DEMO_SPACES.find((space) => space.id === session.spaceId)?.pricePerOccurrenceCents ?? 0,
     }],
   };
 }
@@ -61,6 +62,7 @@ export function createInitialDemoState(): DemoState {
       end: 750,
       status: 'confirmed',
       locationId: 'ruzafa',
+      spaceAmountCents: DEMO_SPACES.find((space) => space.id === 'loft-rueda')?.pricePerOccurrenceCents ?? 0,
     }],
   };
   const gymBooking: DemoBooking = {
@@ -81,12 +83,14 @@ export function createInitialDemoState(): DemoState {
       end: 955,
       status: 'confirmed',
       locationId: 'ruzafa',
+      spaceAmountCents: 0,
     }],
   };
 
   return {
     bookings: [...seededGroupBookings, sampleBooking, gymBooking],
     waitlist: [],
+    conversations: [],
     preferencesByProfessional: Object.fromEntries(
       DEMO_PROFESSIONALS.map((professional) => [
         professional.id,
@@ -110,8 +114,46 @@ function isDemoBooking(value: unknown): value is DemoBooking {
       isObject(occurrence) &&
       typeof occurrence.id === 'string' &&
       typeof occurrence.date === 'string' &&
+      (occurrence.spaceAmountCents === undefined || (Number.isInteger(occurrence.spaceAmountCents) && Number(occurrence.spaceAmountCents) >= 0)) &&
       (occurrence.status === 'confirmed' || occurrence.status === 'cancelled'),
     );
+}
+
+function isDemoConversationMessage(value: unknown): value is DemoConversationMessage {
+  return isObject(value) &&
+    typeof value.id === 'string' &&
+    typeof value.senderId === 'string' &&
+    typeof value.body === 'string' &&
+    typeof value.createdAt === 'string';
+}
+
+function isDemoConversation(value: unknown): value is DemoConversation {
+  return isObject(value) &&
+    typeof value.id === 'string' &&
+    typeof value.clientId === 'string' &&
+    typeof value.clientName === 'string' &&
+    typeof value.professionalId === 'string' &&
+    typeof value.requestedAt === 'string' &&
+    (value.status === 'pending' || value.status === 'accepted' || value.status === 'declined') &&
+    Array.isArray(value.messages) &&
+    value.messages.every(isDemoConversationMessage);
+}
+
+function normalizeLegacyBooking(booking: DemoBooking): DemoBooking {
+  const legacySpace = DEMO_SPACES.find((space) => space.id === booking.spaceId);
+  return {
+    ...booking,
+    occurrences: booking.occurrences.map((occurrence, index) => ({
+      ...occurrence,
+      spaceAmountCents: occurrence.spaceAmountCents ?? (
+        !legacySpace || occurrence.status === 'cancelled'
+          ? 0
+          : booking.mode === 'gym' && index === 0
+            ? 0
+            : legacySpace.pricePerOccurrenceCents
+      ),
+    })),
+  };
 }
 
 function isWaitlistEntry(value: unknown): value is DemoWaitlistEntry {
@@ -138,7 +180,14 @@ export function parseDemoState(serialized: string | null): DemoState {
     ) {
       return createInitialDemoState();
     }
-    return parsed as unknown as DemoState;
+    return {
+      bookings: parsed.bookings.map((booking) => normalizeLegacyBooking(booking)),
+      waitlist: parsed.waitlist,
+      preferencesByProfessional: parsed.preferencesByProfessional as unknown as DemoState['preferencesByProfessional'],
+      conversations: Array.isArray(parsed.conversations)
+        ? parsed.conversations.filter(isDemoConversation)
+        : [],
+    };
   } catch {
     return createInitialDemoState();
   }
@@ -164,20 +213,33 @@ export function saveDemoState(state: DemoState): boolean {
 }
 
 export function createConfirmedDemoBooking(draft: Omit<DemoBooking, 'paymentStatus'>): DemoBooking {
-  const pendingDraft = {
+  const result = resolveCheckoutPayment({
+    outcome: 'success',
+    draft: {
+      id: draft.id,
+      occurrences: draft.occurrences.map((occurrence) => ({ ...occurrence, status: 'pending' as const })),
+    },
+  });
+  if (result.paymentStatus !== 'succeeded') throw new Error('The demo payment could not be confirmed.');
+  return {
     ...draft,
-    paymentStatus: 'simulated-succeeded' as const,
-    occurrences: draft.occurrences.map((occurrence) => ({ ...occurrence, status: 'pending' as const })),
+    paymentStatus: 'simulated-succeeded',
+    occurrences: result.booking.occurrences as DemoBookingOccurrence[],
   };
-  const result = resolveCheckoutPayment({ outcome: 'success', draft: pendingDraft });
-  return result.booking;
 }
 
 export function cancelDemoBookingOccurrence(
   booking: DemoBooking,
   occurrenceId: string,
 ): DemoBooking {
-  return cancelOccurrence(booking, occurrenceId);
+  return {
+    ...booking,
+    occurrences: booking.occurrences.map((occurrence) =>
+      occurrence.id === occurrenceId && occurrence.status === 'confirmed'
+        ? { ...occurrence, status: 'cancelled' }
+        : occurrence,
+    ),
+  };
 }
 
 export function isBookingOwnedByDemoClient(booking: DemoBooking): boolean {
@@ -221,6 +283,7 @@ export function makeOccurrence(input: {
   end: number;
   locationId: string;
   sessionId?: string;
+  spaceAmountCents?: number;
 }): DemoBookingOccurrence {
   return { ...input, status: 'pending' };
 }

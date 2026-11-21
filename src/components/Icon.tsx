@@ -1,4 +1,4 @@
-export type IconName = 'mark' | 'search' | 'pin' | 'calendar' | 'clock' | 'arrow' | 'check' | 'plus' | 'building' | 'person' | 'close';
+export type IconName = 'mark' | 'search' | 'pin' | 'calendar' | 'clock' | 'arrow' | 'check' | 'plus' | 'building' | 'person' | 'close' | 'mail';
 
 const paths: Record<Exclude<IconName, 'mark'>, string> = {
   search: 'M11 19a8 8 0 1 1 5.66-2.34L21 21M19 19l-2.34-2.34',
@@ -11,6 +11,7 @@ const paths: Record<Exclude<IconName, 'mark'>, string> = {
   building: 'M4 21h16M6 21V7l6-4 6 4v14M9 10h1m4 0h1m-6 4h1m4 0h1m-5 7v-4h3v4',
   person: 'M20 21a8 8 0 0 0-16 0m12-13a4 4 0 1 1-8 0 4 4 0 0 1 8 0Z',
   close: 'M18 6 6 18M6 6l12 12',
+  mail: 'M4 6h16v12H4zM4 7l8 6 8-6',
 };
 
 export function Icon({ name, size = 18 }: { name: IconName; size?: number }) {

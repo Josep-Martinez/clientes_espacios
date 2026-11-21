@@ -3,6 +3,24 @@ import type { SpaceOpeningHours, SpaceKind } from './spaces.ts';
 
 export type BookingMode = 'room' | 'gym' | 'home' | 'online';
 export type ServiceFormat = 'individual' | 'group';
+export type DemoRole = 'client' | 'professional' | 'space';
+
+export interface DemoConversationMessage {
+  id: string;
+  senderId: string;
+  body: string;
+  createdAt: string;
+}
+
+export interface DemoConversation {
+  id: string;
+  clientId: string;
+  clientName: string;
+  professionalId: string;
+  status: 'pending' | 'accepted' | 'declined';
+  requestedAt: string;
+  messages: DemoConversationMessage[];
+}
 
 export interface ProfessionalPreferences {
   baseLocationId: string;
@@ -68,6 +86,9 @@ export interface DemoBookingOccurrence {
   status: 'pending' | 'confirmed' | 'cancelled';
   sessionId?: string;
   locationId: string;
+  /** Sample space fee allocated to this occurrence; 0 for a complimentary entry. */
+  spaceAmountCents?: number;
+  [key: string]: unknown;
 }
 
 export interface DemoBooking {
@@ -100,6 +121,7 @@ export interface DemoState {
   bookings: DemoBooking[];
   waitlist: DemoWaitlistEntry[];
   preferencesByProfessional: Record<string, ProfessionalPreferences>;
+  conversations: DemoConversation[];
 }
 
 export interface DemoSpaceRecord {

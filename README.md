@@ -16,33 +16,38 @@ Vite muestra en la terminal la dirección local, normalmente `http://localhost:5
 
 ## Recorridos de la demo
 
-El selector superior permite cambiar entre **Cliente**, **Profesional** y **Gestor de espacio**. Las reservas con pago demo correcto y las preferencias del profesional se guardan en el almacenamiento local del navegador para que se reflejen al cambiar de vista. El botón **Reiniciar demo** restaura los datos iniciales de ejemplo.
+La página de inicio es pública. La navegación superior separa **Buscar y reservar**, **Explorar profesionales y espacios** y **Cómo funciona**. Desde el perfil de la derecha puedes iniciar sesión con una de las cuentas ficticias. No hay contraseñas ni autenticación real. El cambio de cuenta simula las distintas vistas; **Reiniciar demo** restaura reservas, conversaciones y preferencias a los datos iniciales.
 
 ### Cliente
 
-1. Busca por servicio o especialidad, zona y fecha.
+1. Sin iniciar sesión, explora servicios, perfiles profesionales y espacios.
 2. Elige una sesión individual, una sesión de gimnasio o una clase grupal.
 3. En una sesión individual, selecciona modalidad, una hora viable y, cuando corresponda, una sala compatible.
-4. Revisa el checkout único y su desglose antes de pulsar **Simular pago correcto** o **Simular pago fallido**. El pago fallido no crea reserva; el correcto añade la confirmación a las tres vistas.
+4. Puedes revisar el checkout como visitante. Para simular el pago, inicia sesión como cliente desde el perfil superior. El pago fallido no crea reserva; el correcto añade la confirmación a las vistas relacionadas.
 5. En una clase grupal, ajusta las plazas, elige una o varias fechas, revisa cada ocurrencia y comprueba las plazas restantes. Las clases completas permiten apuntarse a una lista de espera gratuita que no retiene aforo.
 6. En **Mis reservas**, cancela una fecha individual de una serie. Las demás fechas siguen confirmadas y la interfaz marca la política de cancelación como pendiente/simulada.
 7. La primera entrada del cliente demo a cada gimnasio aparece a 0 €. El servicio profesional y su comisión de ejemplo se mantienen en el resumen.
 
+En **Explorar profesionales y espacios** puedes buscar perfiles, solicitar una conversación con profesionales desde una cuenta cliente y consultar salas o gimnasios. El chat solo se abre cuando el profesional acepta la solicitud. La ficha del espacio muestra ubicación aproximada, equipamiento, capacidad y tarifa ficticia; no se muestran códigos ni instrucciones privadas.
+
+La página **Cómo funciona** explica el recorrido de reserva, las funciones de cada rol, el desglose y los límites de la simulación.
+
 ### Profesional
 
-1. Selecciona uno de los perfiles ficticios.
-2. Cambia la ubicación base, el radio máximo, el máximo de desplazamiento, el margen y las modalidades disponibles.
-3. Vuelve a Cliente: las horas y opciones se recalculan con esas preferencias.
-4. Realiza un pago demo correcto en Cliente y comprueba la reserva en **Reservas simuladas**.
+1. Inicia sesión como profesional desde el perfil superior.
+2. Consulta tu agenda por fecha. La vista no permite mover ni cancelar citas sin la participación del cliente.
+3. Cambia tu ubicación base, radio máximo, tiempo de desplazamiento, margen y modalidades. Las opciones del cliente se recalculan con esas preferencias.
+4. Revisa solicitudes de conversación, acéptalas o declínalas. El chat solo queda habilitado tras aceptar.
 
-La vista permite configurar las preferencias del profesional. El inventario de salas de terceros se gestiona desde la vista **Gestor de espacio**.
+La cuenta demo representa a Marina Ortega y no ofrece una búsqueda de otros entrenadores.
+Desde su navegación puede explorar salas y gimnasios, sin acceso al directorio de otros profesionales.
 
 ### Gestor de espacio
 
-1. Filtra el inventario por fecha y tipo de espacio.
-2. Revisa horarios ficticios, equipamiento, capacidad y reservas confirmadas para ese día.
-3. Confirma que una reserva creada desde Cliente aparece aquí y que los datos de acceso demo solo se muestran junto a reservas confirmadas, con la etiqueta **Acceso de muestra**.
-4. En clases grupales, consulta el aforo libre y las listas de espera sin plaza retenida.
+1. Inicia sesión como gestora desde el perfil superior.
+2. Consulta el calendario diario de los espacios asignados a esa cuenta.
+3. Revisa las reservas confirmadas, el tiempo ocupado, el porcentaje de uso y los ingresos estimados del periodo de 30 días.
+4. Las cifras son orientativas y usan las tarifas y comisiones de ejemplo. No hay chat con los estudios o gimnasios.
 
 ## Reglas de ejemplo
 
@@ -61,12 +66,13 @@ pnpm typecheck
 pnpm build
 ```
 
-Las pruebas usan el test runner integrado de Node y no necesitan base de datos ni servicios externos. Cubren las reglas principales de disponibilidad, checkout, aforo, lista de espera, pagos simulados y cancelación por ocurrencia.
+Las pruebas usan el test runner integrado de Node y no necesitan base de datos ni servicios externos. Cubren disponibilidad, checkout, aforo, conversaciones, permisos de las cuentas demo, migración del estado local, métricas del espacio y cancelación por ocurrencia.
 
 ## Límites de la demo
 
-- Datos ficticios compartidos en un solo navegador mediante `localStorage`; no hay cuentas, autenticación, base de datos ni sincronización entre usuarios.
+- Los inicios de sesión solo cambian la vista local; no hay cuentas reales, autenticación, base de datos ni sincronización entre usuarios.
+- Las reservas, conversaciones y preferencias se guardan en `localStorage` de un solo navegador.
 - Los botones de pago solo simulan resultados; no se solicitan ni almacenan datos de pago reales.
 - Distancias, desplazamientos, horarios, precios, comisiones, valoraciones, reservas, aforo e instrucciones de acceso son ejemplos editables.
-- No se envían mensajes, no se crean reservas con terceros y no se consultan mapas ni servicios externos.
+- No se envían mensajes fuera del navegador, no se crean reservas con terceros y no se consultan mapas ni servicios externos.
 - Las condiciones de cancelación, reembolsos, recurrencia y liquidaciones siguen pendientes.

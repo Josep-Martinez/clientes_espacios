@@ -1,8 +1,14 @@
 import { useEffect, useState } from 'react';
 import type { DemoBooking, DemoState, DemoWaitlistEntry, ProfessionalPreferences } from '../domain/models.ts';
 import {
+  addConversationMessage as addMessage,
+  requestConversation as createConversationRequest,
+  updateConversationStatus as changeConversationStatus,
+  type NewConversationMessage,
+  type NewConversationRequest,
+} from '../domain/conversations.ts';
+import {
   cancelDemoBookingOccurrence,
-  createInitialDemoState,
   readDemoState,
   saveDemoState,
   updateProfessionalPreferences,
@@ -13,9 +19,11 @@ export interface DemoStore {
   storageUnavailable: boolean;
   addBooking: (booking: DemoBooking) => void;
   addWaitlist: (entry: DemoWaitlistEntry) => void;
+  requestConversation: (request: NewConversationRequest) => void;
+  updateConversationStatus: (conversationId: string, professionalId: string, status: 'accepted' | 'declined') => void;
+  sendConversationMessage: (message: NewConversationMessage) => void;
   cancelOccurrence: (bookingId: string, occurrenceId: string) => void;
   updatePreferences: (professionalId: string, value: ProfessionalPreferences) => void;
-  resetDemo: () => void;
 }
 
 export function useDemoStore(): DemoStore {
@@ -32,6 +40,27 @@ export function useDemoStore(): DemoStore {
 
   function addWaitlist(entry: DemoWaitlistEntry): void {
     setState((current) => ({ ...current, waitlist: [...current.waitlist, entry] }));
+  }
+
+  function requestConversation(request: NewConversationRequest): void {
+    setState((current) => ({
+      ...current,
+      conversations: createConversationRequest(current.conversations, request),
+    }));
+  }
+
+  function updateConversationStatus(conversationId: string, professionalId: string, status: 'accepted' | 'declined'): void {
+    setState((current) => ({
+      ...current,
+      conversations: changeConversationStatus(current.conversations, conversationId, professionalId, status),
+    }));
+  }
+
+  function sendConversationMessage(message: NewConversationMessage): void {
+    setState((current) => ({
+      ...current,
+      conversations: addMessage(current.conversations, message),
+    }));
   }
 
   function cancelOccurrence(bookingId: string, occurrenceId: string): void {
@@ -56,17 +85,15 @@ export function useDemoStore(): DemoStore {
     }));
   }
 
-  function resetDemo(): void {
-    setState(createInitialDemoState());
-  }
-
   return {
     state,
     storageUnavailable,
     addBooking,
     addWaitlist,
+    requestConversation,
+    updateConversationStatus,
+    sendConversationMessage,
     cancelOccurrence,
     updatePreferences,
-    resetDemo,
   };
 }

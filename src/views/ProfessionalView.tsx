@@ -1,26 +1,16 @@
-import { useMemo, useState } from 'react';
 import { PageHeading } from '../components/AppChrome.tsx';
-import { formatDateLabel, formatTime, DEMO_LOCATIONS, DEMO_PROFESSIONALS, DEMO_SERVICES } from '../data/demoData.ts';
-import type { BookingMode, ProfessionalPreferences } from '../domain/models.ts';
+import { DEMO_LOCATIONS, DEMO_PROFESSIONALS, DEMO_SERVICES } from '../data/demoData.ts';
 import { DEMO_BOOKING_MODE_LABELS } from '../data/demoConfig.ts';
+import type { BookingMode, ProfessionalPreferences } from '../domain/models.ts';
 import type { DemoStore } from '../state/useDemoStore.ts';
 
 const modalityChoices: BookingMode[] = ['room', 'gym', 'home', 'online'];
 
-export function ProfessionalView({ demo }: { demo: DemoStore }) {
-  const [professionalId, setProfessionalId] = useState(DEMO_PROFESSIONALS[0]?.id ?? '');
+export function ProfessionalView({ demo, professionalId }: { demo: DemoStore; professionalId: string }) {
   const professional = DEMO_PROFESSIONALS.find((item) => item.id === professionalId);
   const preferences = professional
     ? demo.state.preferencesByProfessional[professional.id] ?? professional.preferences
     : null;
-  const bookings = useMemo(() => demo.state.bookings
-    .filter((booking) => booking.professionalId === professionalId)
-    .flatMap((booking) => {
-      const service = DEMO_SERVICES.find((item) => item.id === booking.serviceId);
-      return booking.occurrences.map((occurrence) => ({ booking, occurrence, service }));
-    })
-    .sort((a, b) => `${a.occurrence.date}-${a.occurrence.start}`.localeCompare(`${b.occurrence.date}-${b.occurrence.start}`)),
-  [demo.state.bookings, professionalId]);
 
   function updatePreferences(patch: Partial<ProfessionalPreferences>): void {
     if (!professional || !preferences) return;
@@ -39,13 +29,13 @@ export function ProfessionalView({ demo }: { demo: DemoStore }) {
     <div className="role-view professional-view" id="inicio">
       <div className="role-intro-grid">
         <PageHeading
-          title="Tu agenda, con margen para moverte."
-          description="Ajusta tus preferencias de trabajo. La demo solo ofrece al cliente las horas que encajan con agenda, desplazamiento y espacio."
+          title="Tu perfil profesional."
+          description="Revisa tu presentación y ajusta las condiciones de trabajo que determinan qué sesiones aparecen al explorar."
         />
         <div className="role-summary-card professional-summary">
-          <span className="eyebrow">PREFERENCIAS DE MUESTRA</span>
+          <span className="eyebrow">RADIO DE TRABAJO</span>
           <strong>{preferences?.maxRadiusKm ?? 0} km</strong>
-          <span>Radio máximo desde tu ubicación base</span>
+          <span>Desde tu ubicación base</span>
           <div className="summary-micro-line"><span /><span /><span /></div>
         </div>
       </div>
@@ -54,19 +44,13 @@ export function ProfessionalView({ demo }: { demo: DemoStore }) {
         <article className="panel-card preference-card">
           <div className="panel-card-heading">
             <div>
-              <span className="eyebrow">PERFIL DEMO</span>
+              <span className="eyebrow">PREFERENCIAS DE MUESTRA</span>
               <h2>Preferencias de trabajo</h2>
-              <p>Estas opciones cambian las horas y modalidades que aparecen en la vista Cliente.</p>
+              <p>Los cambios afectan a las horas y modalidades disponibles para tus servicios en esta demo.</p>
             </div>
             <span className="demo-tag">Editable en esta sesión</span>
           </div>
           <div className="form-grid">
-            <div className="field field-wide">
-              <label htmlFor="professional-profile">Perfil profesional</label>
-              <select id="professional-profile" onChange={(event) => setProfessionalId(event.currentTarget.value)} value={professionalId}>
-                {DEMO_PROFESSIONALS.map((item) => <option key={item.id} value={item.id}>{item.name} · {item.headline}</option>)}
-              </select>
-            </div>
             <div className="field">
               <label htmlFor="professional-base">Ubicación base</label>
               <select id="professional-base" onChange={(event) => updatePreferences({ baseLocationId: event.currentTarget.value })} value={preferences?.baseLocationId ?? ''}>
@@ -89,7 +73,7 @@ export function ProfessionalView({ demo }: { demo: DemoStore }) {
           </div>
           <fieldset className="preference-modalities">
             <legend>Modalidades disponibles</legend>
-            <p>Configuras lo que ofreces; las salas siguen siendo parte del inventario del gestor.</p>
+            <p>Configuras lo que ofreces; las salas siguen formando parte del inventario del gestor.</p>
             <div className="modality-toggles">
               {modalityChoices.map((modality) => (
                 <label className="toggle-choice" key={modality}>
@@ -99,7 +83,7 @@ export function ProfessionalView({ demo }: { demo: DemoStore }) {
               ))}
             </div>
           </fieldset>
-          <p className="privacy-hint"><strong>Privacidad:</strong> tus citas y los lugares de otras personas no se muestran en el buscador del cliente.</p>
+          <p className="privacy-hint"><strong>Privacidad:</strong> tu agenda privada no aparece en el buscador del cliente.</p>
         </article>
 
         <aside className="profile-card">
@@ -115,46 +99,18 @@ export function ProfessionalView({ demo }: { demo: DemoStore }) {
               <div className="profile-location"><span aria-hidden="true">⌖</span> {professional.publicZone}</div>
               <div className="category-chips">{professional.categories.map((category) => <span key={category}>{category}</span>)}</div>
               <div className="profile-divider" />
-              <span className="eyebrow">SERVICIOS DE MUESTRA</span>
+              <span className="eyebrow">SERVICIOS PUBLICADOS</span>
               <ul className="profile-services">
                 {DEMO_SERVICES.filter((service) => service.professionalId === professional.id).map((service) => (
-                  <li key={service.id}><span>{service.name}</span><strong>{(service.priceCents / 100).toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}</strong></li>
+                  <li key={service.id}>
+                    <span>{service.name}</span>
+                    <strong>{(service.priceCents / 100).toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}</strong>
+                  </li>
                 ))}
               </ul>
             </>
           ) : <p>No hay perfiles demo disponibles.</p>}
         </aside>
-      </section>
-
-      <section className="role-bookings-section" aria-labelledby="professional-bookings-title">
-        <div className="section-title-row">
-          <div>
-            <span className="eyebrow">AGENDA COMPARTIDA</span>
-            <h2 id="professional-bookings-title">Reservas simuladas</h2>
-            <p>Los pagos demo correctos aparecen aquí al instante. Las fechas canceladas se mantienen identificadas.</p>
-          </div>
-          <span className="fake-data-label">{bookings.filter(({ occurrence }) => occurrence.status === 'confirmed').length} confirmadas</span>
-        </div>
-        {bookings.length ? (
-          <div className="professional-booking-list">
-            {bookings.map(({ booking, occurrence, service }) => (
-              <article className="professional-booking-row" key={`${booking.id}-${occurrence.id}`}>
-                <div className="booking-date-stamp"><strong>{new Date(`${occurrence.date}T12:00:00`).getDate().toString().padStart(2, '0')}</strong><span>{formatDateLabel(occurrence.date, { month: 'short' })}</span></div>
-                <div className="booking-row-main">
-                  <h3>{service?.name ?? 'Servicio demo'}</h3>
-                  <p>{booking.clientName} · {formatTime(occurrence.start)} · {occurrence.locationId === 'online' ? 'En línea' : DEMO_LOCATIONS.find((location) => location.id === occurrence.locationId)?.name ?? 'Ubicación demo'}</p>
-                  {booking.seriesId && <span className="series-label">Serie con fechas individuales</span>}
-                </div>
-                <span className={occurrence.status === 'confirmed' ? 'status-label status-confirmed' : 'status-label status-cancelled'}>
-                  {occurrence.status === 'confirmed' ? 'Confirmada · pago demo' : 'Cancelada · política pendiente'}
-                </span>
-              </article>
-            ))}
-          </div>
-        ) : (
-          <div className="empty-state compact-empty"><h3>Sin reservas para este perfil</h3><p>Prueba un pago correcto desde la vista Cliente para ver cómo aparece aquí.</p></div>
-        )}
-        <p className="pending-decisions-note">Los importes, tiempos y condiciones que aparecen aquí son ficticios. No se genera ninguna cita operativa.</p>
       </section>
     </div>
   );
