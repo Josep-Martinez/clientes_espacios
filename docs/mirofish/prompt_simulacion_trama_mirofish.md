@@ -1,78 +1,59 @@
-# Prompt de simulación de Trama en MiroFish
+# Prompt estratégico de Trama para MiroFish
+
+## Para qué sirve
+
+Esta versión explora el **negocio y sus segmentos de adopción**, no el diseño de pantallas. MiroFish no navegará por Trama ni comprobará el funcionamiento de la web.
 
 ## Preparación
 
 1. Sube `semilla_trama_mirofish.md` como material semilla.
-2. Usa **Trama — prueba piloto sintética de marketplace** como nombre del proyecto.
-3. Copia el bloque siguiente en el campo de requisitos de simulación.
-4. Si MiroFish permite configurar tamaño o duración, empieza con una simulación pequeña y corta para revisar si el resultado es útil antes de ampliarla.
+2. Nombre sugerido: **Trama — segmentos y enfoque de lanzamiento**.
+3. Pega el bloque siguiente en el requisito de simulación.
 
-## Requisito de simulación para copiar y pegar
+## Requisito de simulación
 
 ```text
-Simula una prueba piloto exploratoria de la demo web Trama, un marketplace de bienestar y entrenamiento que conecta clientes, profesionales y gestores de espacios. Usa como única fuente de hechos el material semilla adjunto. El horizonte narrativo es el primer mes de una invitación beta en Valencia; esto es un escenario hipotético, no una predicción ni evidencia de mercado.
+Simula la reacción ante el anuncio hipotético de un piloto local de Trama, un marketplace que conecta clientes, profesionales de bienestar/entrenamiento y gestores de espacios. Usa la semilla como fuente de hechos sobre el proyecto. El piloto en Valencia es solo un escenario; Trama aún no está lanzada.
 
-OBJETIVO
-Identificar qué entienden, valoran, dudan y abandonan los distintos tipos de usuario al descubrir Trama y recorrer sus flujos principales. Simula experiencias y conversaciones entre agentes con motivaciones distintas. No afirmes que los agentes han navegado realmente por la web ni que han probado botones: no tienes acceso interactivo al sitio. Evalúa los recorridos descritos en el material semilla como escenarios hipotéticos.
+PREGUNTA
+¿Qué segmentos tienen una necesidad suficientemente clara como para probar Trama, repetir su uso o aportar oferta? ¿Qué debería construir o validar primero el equipo para mejorar las posibilidades del negocio?
 
-POBLACIÓN SINTÉTICA
-Representa, si el tamaño de simulación lo permite, a 12 personas con perfiles diferenciados:
-- 5 clientes: alguien que nunca ha reservado online; alguien que compara precios; alguien que ya entrena con profesional; alguien interesado en clases grupales; y alguien que valora especialmente privacidad y confianza.
-- 3 profesionales independientes: una persona que prioriza llenar huecos; otra que protege su autonomía y agenda; y otra que necesita conversar antes de aceptar un nuevo cliente.
-- 2 gestores de espacios: una persona con una sala pequeña que busca ocupación; y otra que gestiona un gimnasio y necesita entender reservas, uso e ingresos.
-- 2 personas con doble rol de profesional y gestora de espacio, interesadas en saber si la cuenta y la agenda combinadas son fáciles de entender.
-Haz que tengan distintas edades adultas, familiaridad digital, disponibilidad, presupuesto y tolerancia a la incertidumbre, sin usar estereotipos ni inventar datos personales sensibles.
+Haz una simulación crítica, no una presentación promocional. Incluye agentes de todos estos grupos y también personas escépticas: clientes de diferentes servicios; entrenadores que necesitan espacio, trabajan sin espacio externo o ya tienen centro propio; profesionales de otras categorías; gestores de salas/estudios/gimnasios; y personas con doble rol. No fijes una cantidad de agentes como si fuera una muestra estadística.
 
-RECORRIDOS A SIMULAR
-1. CLIENTE SIN CUENTA: descubre Trama, explora profesionales y espacios, busca una sesión, entiende qué incluye el precio, llega al checkout y decide si iniciar sesión para completar el pago simulado o abandonar. Observa si entiende qué puede hacer sin cuenta y por qué se le pide iniciar sesión.
-2. CLIENTE QUE NECESITA ACLARAR DUDAS: localiza un profesional, solicita una conversación, espera la aceptación y decide si la mensajería le da confianza suficiente para seguir hacia una reserva.
-3. CLIENTE DE CLASE GRUPAL: revisa fechas y plazas, compara una clase disponible con una completa y valora la lista de espera gratuita. Después consulta cómo entendería una reserva con varias fechas.
-4. CANCELACIÓN: una persona abre una reserva, revisa los detalles y considera cancelar una fecha. Evalúa la reacción al aviso de que podría haber un coste cuando el importe y la política aún no están definidos. No inventes una tarifa de cancelación.
-5. PROFESIONAL: revisa la navegación, su perfil, preferencias y agenda. Cambia entre mes, semana y día, abre una reserva para ver los detalles del cliente y responde a una solicitud de conversación. Comprueba si entiende que no puede buscar otros entrenadores ni cambiar una cita unilateralmente.
-6. GESTOR DE ESPACIO: busca su espacio, revisa reservas, ocupación e ingresos estimados y decide qué información o controles necesita para confiar en la herramienta.
-7. DOBLE ROL: alterna entre perfil profesional, espacio propio y agenda; identifica si distingue qué reservas pertenecen a cada actividad y qué información espera ver.
-8. PRECIO: compara una reserva con y sin espacio. Evalúa si el desglose X + Z + Y + W y la primera entrada al gimnasio a 0 € se entienden, y qué preguntas suscitan las comisiones. No presupongas importes o porcentajes que no aparezcan en la semilla.
+Compara tres enfoques de lanzamiento de la semilla: (A) entrenamiento personal + salas/gimnasios; (B) varias categorías de bienestar desde el principio, con espacio opcional; (C) búsqueda de espacios para profesionales como primer producto. Para cada enfoque identifica:
+- Qué problema y qué alternativa actual tendría cada segmento.
+- Si la necesidad parece frecuente o puntual; si no hay información, márcala como desconocida.
+- Qué valor concreto haría que alguien pruebe, repita, pague o publique su oferta.
+- Por qué alguien no lo usaría y qué segmentos obtendrían poco valor.
+- Qué lado del marketplace habría que incorporar primero y qué densidad local necesitarían los demás.
+- Qué riesgos crean las comisiones, la coordinación, la confianza, las cancelaciones y el trato directo fuera de la plataforma.
 
-PREGUNTAS DE ANÁLISIS
-- ¿Qué tarea intenta completar cada persona y qué la haría seguir, pedir ayuda o abandonar?
-- ¿Qué términos, pasos o diferencias entre roles se malinterpretan?
-- ¿En qué momento aparecen dudas de confianza, privacidad, disponibilidad, pagos, comisiones o cancelaciones?
-- ¿La puerta de inicio de sesión en el checkout parece razonable? ¿Qué información querrían ver antes de registrarse?
-- ¿El calendario y sus tres vistas resuelven necesidades distintas? ¿Qué esperan al seleccionar una fecha o una reserva?
-- ¿La aceptación previa a los mensajes ayuda a profesionales, clientes o a ambos? ¿Qué efecto podría tener en el tiempo de respuesta?
-- ¿Qué necesitan los gestores para evaluar el valor de publicar o gestionar un espacio?
-- ¿Cómo cambia la experiencia de una persona con doble rol?
-- ¿Qué barreras diferencian a quien ofrece servicios de quien aporta un espacio?
+Evalúa cualitativamente la comisión por servicio y la comisión adicional cuando hay espacio: quién obtiene valor, quién asume el coste y qué condiciones facilitarían o frenarían su aceptación. No propongas importes ni porcentajes sin datos.
 
-COMPARACIONES
-Cuando sea posible, compara estas alternativas como hipótesis, sin presentarlas como experimentos reales:
-A. Pedir el inicio de sesión solo al iniciar el pago frente a explicarlo antes, durante la exploración.
-B. Mostrar la vista mensual como entrada a la agenda frente a abrir la vista diaria del primer día con reservas.
-C. Mostrar el aviso de cancelación con política pendiente frente a pedir que la política esté definida antes de activar la cancelación.
-D. Mantener navegación común adaptada por rol frente a mostrar una etiqueta más explícita de “vista profesional” o “vista de espacio” en cuentas con doble rol.
-Indica qué perfiles podrían preferir cada alternativa y por qué; no declares un ganador estadístico.
-
-FORMATO DEL INFORME
-1. Resumen ejecutivo breve con 5 hallazgos sintéticos y el nivel de confianza cualitativo (alto, medio o bajo) según la consistencia de la simulación.
-2. Tabla de perfiles, necesidades, motivaciones y principales objeciones.
-3. Resultado de cada recorrido: intención, pasos que entiende, fricción, reacción emocional y posible decisión.
-4. Lista priorizada de problemas, ordenada por impacto potencial y número de perfiles sintéticos afectados. Aclara que ese número no representa una tasa de mercado.
-5. Oportunidades concretas de mejora de producto y texto de interfaz, sin rediseñar funcionalidades que la semilla no describe.
-6. Recomendaciones para una prueba posterior con personas reales: tareas, preguntas neutrales y perfiles a reclutar.
-7. Límites: separa claramente los hechos de la semilla, las inferencias del modelo y cualquier dato no disponible. Si una conclusión depende de algo no descrito, márcala como supuesto y no la rellenes inventando.
+INFORME
+Entrega solo estas cuatro partes:
+1. Conclusión ejecutiva: segmento que parece mejor para validar primero, razones, incertidumbres y qué podría refutar la conclusión.
+2. Tabla comparativa de segmentos: problema, alternativa, propensión sintética a probar/repetir/pagar (alta/media/baja, nunca porcentaje), barreras y valor mínimo que necesitarían.
+3. Comparación A/B/C: ventajas, riesgos, dependencias entre los tres lados y señal temprana de que cada enfoque no funciona.
+4. Tres mejoras de negocio priorizadas y tres experimentos reales para validarlas con clientes, profesionales y gestores. Los experimentos deben observar conducta (por ejemplo, una solicitud concreta, disponibilidad publicada o una reserva de prueba), incluir una pregunta neutral y explicar qué decisión informarían. No inventes resultados ni umbrales universales.
 
 REGLAS
-- Todas las personas y conversaciones son sintéticas. No escribas testimonios como si fueran citas de clientes reales; cualquier frase ilustrativa debe llevar la etiqueta “diálogo simulado”.
-- No inventes precios, porcentajes, disponibilidad real, resultados de negocio, competidores, regulación ni estadísticas de Valencia.
-- No asumas que la demo procesa pagos, guarda datos en un servidor o envía mensajes reales.
-- No confundas simulación de opiniones con una prueba de usabilidad observada o con validación de demanda.
-- Mantén una mirada crítica: identifica también cuándo una función parece innecesaria o genera más complejidad que valor.
+- Separa hechos de la semilla, supuestos del escenario e inferencias de los agentes.
+- Las conversaciones y conclusiones son sintéticas; no son entrevistas, ventas ni evidencia de demanda.
+- No conviertas el número de agentes, publicaciones u opiniones en porcentajes de población o cuota de mercado.
+- No inventes usuarios, frecuencia, precios aceptados, ingresos, CAC, competidores, tamaño de mercado ni acuerdos con espacios.
+- No afirmes que los agentes han usado o navegado por la demo.
+- Incluye objeciones y escenarios en los que Trama no tendría sentido.
 ```
 
-## Contexto opcional
+## Contexto adicional opcional
 
-Si MiroFish ofrece un campo de contexto adicional, puedes pegar esto:
+Si MiroFish tiene un campo separado para contexto, pega esto:
 
 ```text
-Trama es una demo local para explorar el funcionamiento de un marketplace; no es todavía un servicio comercial operativo. Queremos usar la simulación para preparar pruebas de producto con personas reales y descubrir preguntas que aún no hemos resuelto. La prioridad es comprender la experiencia por rol, la claridad de la reserva y el nivel de confianza, sin tratar los resultados sintéticos como evidencia de mercado.
+Trama es una idea con una demo local de datos ficticios. No hay usuarios activos, entrevistas, acuerdos con espacios, reservas reales ni datos de conversión en el material. Buscamos decidir qué segmento merece validarse primero, qué valor tendría que ofrecer Trama y qué partes de la propuesta conviene posponer. El resultado debe servir para diseñar investigación real, no para afirmar que existe demanda.
 ```
+
+## Qué esperar
+
+La petición está formulada como un escenario de lanzamiento y reacción de agentes porque MiroFish construye un mundo simulado a partir de materiales semilla y requisitos en lenguaje natural. El resultado puede sugerir objeciones y pruebas de negocio; **no puede demostrar que muchos usuarios reales adoptarían Trama**. Para eso hacen falta entrevistas y señales de comportamiento real. Consulta el [flujo descrito por MiroFish](https://github.com/666ghj/MiroFish#workflow).

@@ -1,76 +1,65 @@
-# Trama — material semilla para simulación en MiroFish
+# Trama — semilla de negocio para MiroFish
 
-## Para qué sirve este documento
+## Proyecto
 
-Este archivo describe la demo web de **Trama**, un marketplace que conecta a personas que buscan sesiones de bienestar o entrenamiento, profesionales que ofrecen servicios y personas que gestionan salas o gimnasios. Se utilizará como material de referencia para una simulación exploratoria de experiencias y objeciones.
+**Trama** es el concepto de un marketplace web que coordina la contratación de servicios de bienestar y entrenamiento con el profesional y, cuando hace falta, un espacio adecuado. Los tres participantes posibles son el cliente, el profesional y el gestor del espacio.
 
-La demo es un prototipo local. El contenido de este documento describe funcionalidades implementadas y límites conocidos; las opiniones de usuarios, la intención de compra y la adopción son cuestiones que la simulación debe explorar, no hechos demostrados.
+La propuesta no consiste solo en alquilar salas ni solo en publicar perfiles. Busca resolver en un mismo recorrido la combinación de servicio, disponibilidad, lugar y reserva. El espacio es opcional; muchos servicios pueden prestarse a domicilio, en línea o en el espacio del profesional.
 
-## Qué permite la demo
+## Quién podría obtener valor
 
-### Acceso público y navegación por tipo de cuenta
+### Clientes
 
-Una persona sin cuenta puede explorar profesionales, espacios y servicios, consultar cómo funciona Trama y llegar a revisar una reserva. Para simular el pago debe iniciar sesión con una cuenta ficticia de cliente. La navegación cambia según los permisos de la cuenta:
+Personas que quieren encontrar o reservar entrenamiento personal, clases individuales o grupales, Pilates, yoga, movilidad, fisioterapia, podología, masaje o nutrición. Algunas podrían necesitar ayuda para encontrar profesional y horario; otras ya tienen un centro o especialista habitual y quizá no necesiten Trama.
 
-| Tipo de cuenta | Navegación principal |
-|---|---|
-| Visitante | Explorar · Profesionales · Espacio · Cómo funciona |
-| Cliente | Explorar · Profesionales · Espacio · Mi agenda · Cómo funciona |
-| Profesional | Explorar · Mi perfil · Espacio · Mi agenda · Cómo funciona |
-| Gestor de espacio | Explorar · Profesionales · Mi espacio · Mi agenda · Cómo funciona |
-| Profesional y gestor | Explorar · Mi perfil · Mi espacio · Mi agenda · Cómo funciona |
+### Profesionales
 
-La cuenta demo de cliente se llama Nerea Soler; la de profesional, Marina Ortega; la de gestora, Marta Soler. También existe una cuenta que combina profesional y gestora.
+Profesionales independientes que podrían querer:
 
-### Recorrido de reserva de cliente
+- Encontrar nuevos clientes.
+- Llenar huecos en su agenda.
+- Encontrar y reservar una sala o gimnasio para una sesión concreta.
+- Reducir coordinación manual de horarios, clientes y lugares.
 
-- El cliente puede explorar sesiones individuales, entrenamiento con gimnasio y clases grupales, así como perfiles profesionales y espacios.
-- En una sesión individual puede elegir modalidad, fecha y hora viable. Cuando el servicio requiere una sala, puede seleccionar un espacio compatible.
-- Puede revisar el precio antes del paso de pago. El desglose de ejemplo separa servicio profesional (X), comisión de servicio (Z), uso de espacio (Y) y comisión de espacio (W). Si no se usa un espacio, Y y W no aplican.
-- La primera entrada demo de un cliente a cada gimnasio tiene coste de espacio de 0 €. El servicio profesional y su comisión de ejemplo se mantienen.
-- El pago es una simulación. Un resultado fallido no crea reserva; uno correcto añade una reserva ficticia a las vistas relacionadas.
-- Las clases grupales tienen aforo. Una clase completa permite apuntarse a una lista de espera gratuita; apuntarse no bloquea una plaza.
-- En una serie de sesiones se puede cancelar una ocurrencia individual sin cancelar las demás. La interfaz avisa de que la cancelación podría tener un coste, pero la política, el importe y los reembolsos no están definidos.
+Los candidatos incluyen entrenadores personales, instructores de clases, fisioterapeutas y otros profesionales de bienestar. Sus necesidades no son necesariamente iguales: algunos necesitan espacio externo; otros trabajan a domicilio, en línea o en su propio centro.
 
-### Profesionales y conversaciones
+### Gestores de espacios
 
-- Un cliente puede solicitar iniciar una conversación desde el perfil de un profesional.
-- La conversación solo permite intercambiar mensajes después de que el profesional acepte la solicitud.
-- El profesional puede aceptar o rechazar solicitudes y consultar sus mensajes desde el acceso **Mensajes** de la cabecera.
-- La cuenta profesional puede consultar su propio perfil, servicios y agenda. No tiene un directorio para buscar a otros entrenadores.
-- El profesional puede cambiar preferencias de zona, radio, desplazamientos, margen y modalidades. En la demo, esas preferencias afectan a las opciones que se presentan al cliente.
-- Los profesionales y los gestores de espacios no tienen chat con estudios o gimnasios.
+Propietarios o gestores de salas, estudios, consultas y gimnasios que podrían querer ofrecer horas disponibles y aumentar la ocupación. Pueden valorar el acceso a nuevos clientes, pero también preocuparse por el control de la agenda, el precio, el acceso, los daños, la limpieza, las cancelaciones y el trabajo operativo.
 
-### Agenda y gestión del espacio
+Una misma persona puede ser profesional y gestora de un espacio.
 
-- **Mi agenda** permite cambiar entre vistas de mes, semana y día. Al seleccionar una fecha se abre su vista diaria; al seleccionar una reserva se muestran sus detalles.
-- Según el rol, la agenda muestra las reservas relacionadas con el cliente, el profesional o los espacios gestionados. En las citas profesionales se pueden consultar el cliente, servicio, fecha, hora y lugar.
-- La demo no permite que un profesional cambie unilateralmente una cita. Los cambios requieren la participación del cliente.
-- La gestora de espacio consulta los espacios vinculados a su cuenta, las reservas, el tiempo ocupado, el porcentaje de uso y una estimación de ingresos de los últimos 30 días.
-- La cuenta con doble rol ve su perfil profesional y su espacio dentro de una misma cuenta; cada vista debe interpretarse según el rol que representa.
+## Tesis comercial actual
 
-## Qué es ficticio o está pendiente
+La dirección inicial del modelo contempla cobrar una comisión por las reservas del servicio y, cuando se usa un espacio, otra comisión asociada a esa reserva. No se ha aprobado ningún porcentaje, tarifa fija ni margen. No se prevé una suscripción de la plataforma en el lanzamiento inicial; cualquier alternativa puede analizarse como hipótesis, no como decisión.
 
-- Los inicios de sesión son selectores locales de cuentas de demostración, no autenticación real.
-- No hay base de datos, sincronización entre usuarios, procesamiento de pagos ni comunicación externa.
-- Reservas, mensajes, preferencias y cambios se guardan localmente en el navegador mediante `localStorage`.
-- Perfiles, ubicaciones, horarios, distancias, disponibilidad, precios, comisiones, valoraciones, reservas, aforos e instrucciones son datos de ejemplo.
-- Las distancias no provienen de mapas ni de rutas reales. No se deben inferir tiempos de viaje reales.
-- Las condiciones de cancelación, reembolso, recurrencia y liquidación no están decididas.
-- Los importes estimados de los gestores no representan ingresos reales ni una promesa de rentabilidad.
+La actividad de Trama depende de que coincidan oferta profesional, espacios adecuados y clientes en una misma zona y momento. Si falta uno de esos grupos, la propuesta puede perder valor para los otros. La densidad local, el lado más fácil de captar primero y la repetición de uso todavía no se han demostrado.
 
-## Hipótesis abiertas para explorar
+## Opciones de enfoque que el equipo quiere comparar
 
-Estas ideas son preguntas, no conclusiones:
+Son escenarios estratégicos, no decisiones tomadas:
 
-1. La posibilidad de explorar sin cuenta puede ayudar a descubrir la oferta, pero la obligación de iniciar sesión al pagar puede provocar abandono.
-2. Mostrar todas las partidas del precio antes de pagar puede aumentar la claridad, aunque las comisiones separadas también pueden generar dudas.
-3. La agenda con vistas de mes, semana y día podría resultar útil a profesionales y gestores, pero algunos pueden preferir una vista diaria más sencilla.
-4. Los avisos sobre un posible coste de cancelación pueden reducir cancelaciones de última hora o generar desconfianza si la política aún no está concretada.
-5. La mensajería previa a la reserva podría ayudar a resolver dudas; exigir que el profesional acepte la solicitud podría ralentizar la respuesta.
-6. Un gestor puede valorar métricas de uso e ingresos estimados, pero también necesitar datos sobre disponibilidad, conflictos, cobros y control de reservas.
-7. La navegación adaptada a cada rol podría simplificar la aplicación, aunque una cuenta con doble rol puede necesitar señales más claras sobre la vista activa.
+1. **Enfoque estrecho:** empezar con entrenadores personales que necesitan salas o gimnasios; añadir otros servicios después.
+2. **Enfoque amplio:** lanzar con varias categorías de bienestar y entrenamiento, con espacio opcional.
+3. **Enfoque de espacios:** ayudar primero a profesionales a encontrar salas o gimnasios; desarrollar la captación de clientes en una fase posterior.
 
-## Cómo interpretar la simulación
+La simulación debe considerar también que ciertos profesionales y clientes podrían preferir sus soluciones actuales y no necesitar una plataforma nueva.
 
-Los perfiles y conversaciones generados por MiroFish son sintéticos. Sirven para sacar hipótesis y preparar entrevistas o pruebas moderadas; no prueban que exista demanda, que una función sea usable ni que una persona real pague. No se deben presentar expresiones simuladas como testimonios reales ni convertir frecuencias de agentes en porcentajes de mercado.
+## Estado del producto y evidencia disponible
+
+Existe una demo navegable con perfiles y datos ficticios, búsqueda, preferencias de profesional, agenda, reserva simulada, desglose de ejemplo y conversaciones locales. No es un servicio lanzado: no tiene usuarios reales, pagos, backend, acuerdos con centros, disponibilidad real ni transacciones operativas.
+
+El material del proyecto no aporta entrevistas, observaciones de comportamiento, pilotos, usuarios activos, reservas reales, conversión, frecuencia de uso, disposición a pagar, comisiones aceptadas, costes de captación, márgenes ni tamaño de mercado. Tampoco contiene una investigación competitiva completa. La simulación no debe inventar esos datos.
+
+## Preguntas abiertas de negocio
+
+- ¿Qué segmento tiene una necesidad más frecuente y costosa de resolver?
+- ¿Para quién es esencial coordinar servicio y espacio en una sola reserva?
+- ¿Qué lado del marketplace se puede captar primero y qué tendría que estar disponible para atraer a los demás?
+- ¿Qué segmentos probarían Trama una vez, volverían a usarla o publicarían su oferta de forma continuada?
+- ¿La comisión aporta suficiente valor para ambas partes o hace más atractiva la coordinación directa fuera de la plataforma?
+- ¿Qué categorías aportan valor y cuáles ampliarían demasiado el alcance antes de probar la propuesta principal?
+
+## Interpretación
+
+Los agentes de MiroFish son sintéticos. Sus conversaciones pueden revelar objeciones y escenarios que merecen investigarse, pero no son clientes, entrevistas ni evidencia de mercado. No se deben convertir sus opiniones o frecuencias en cifras de adopción, ingresos o tamaño de mercado.
