@@ -2,7 +2,7 @@ export interface WaitlistEntry {
   id: string;
   clientId: string;
   sessionId: string;
-  status: 'waitlisted';
+  status: "waitlisted";
   chargeCents: 0;
   occupiesSeat: false;
 }
@@ -26,11 +26,15 @@ export function canReserveSeats(input: {
 
 export function countConfirmedSeats(
   sessionId: string,
-  bookings: Array<{ seats: number; occurrences: Array<{ sessionId?: string; status: string }> }>,
+  bookings: Array<{
+    seats: number;
+    occurrences: Array<{ sessionId?: string; status: string }>;
+  }>,
 ): number {
   return bookings.reduce((total, booking) => {
     const hasConfirmedOccurrence = booking.occurrences.some(
-      (occurrence) => occurrence.sessionId === sessionId && occurrence.status === 'confirmed',
+      (occurrence) =>
+        occurrence.sessionId === sessionId && occurrence.status === "confirmed",
     );
     return total + (hasConfirmedOccurrence ? Math.max(0, booking.seats) : 0);
   }, 0);
@@ -40,13 +44,20 @@ export function joinWaitlist(
   waitlist: WaitlistEntry[],
   details: { id: string; clientId: string; sessionId: string },
   capacity: { capacity: number; confirmedSeats: number },
-): { entry: WaitlistEntry; waitlist: WaitlistEntry[]; remainingSeats: number } | null {
-  const remainingSeats = Math.max(0, capacity.capacity - capacity.confirmedSeats);
+): {
+  entry: WaitlistEntry;
+  waitlist: WaitlistEntry[];
+  remainingSeats: number;
+} | null {
+  const remainingSeats = Math.max(
+    0,
+    capacity.capacity - capacity.confirmedSeats,
+  );
   if (remainingSeats > 0) return null;
 
   const entry: WaitlistEntry = {
     ...details,
-    status: 'waitlisted',
+    status: "waitlisted",
     chargeCents: 0,
     occupiesSeat: false,
   };
