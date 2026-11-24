@@ -12,6 +12,7 @@ import {
   type BookFitActor,
   type Catalog,
   type Checkout,
+  type CheckoutPaymentResult,
   type ClassSession,
   type DemoProfile,
   type InformationRequest,
@@ -514,12 +515,20 @@ export default function App() {
           onPay={async (outcome) => {
             setBusy(true);
             try {
-              const result = await bookfitApi.post<Checkout>(
+              const result = await bookfitApi.post<CheckoutPaymentResult>(
                 `/dev/checkouts/${checkout.checkoutId}/pay`,
                 { outcome },
                 bookfitApi.idempotencyKey(),
               );
-              setCheckout(result);
+              setCheckout((current) =>
+                current
+                  ? {
+                      ...current,
+                      status: result.status,
+                      totalCents: result.totalCents,
+                    }
+                  : current,
+              );
               if (result.status === "paid") {
                 setFeedback({
                   kind: "success",

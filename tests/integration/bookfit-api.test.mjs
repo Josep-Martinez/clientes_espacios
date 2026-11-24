@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { test } from "node:test";
 
@@ -53,6 +54,8 @@ const ids = {
   dualRoleOccurrence: "71000000-0000-4000-8000-000000000005",
   pilatesService: "40000000-0000-4000-8000-000000000003",
   personalService: "40000000-0000-4000-8000-000000000001",
+  physioService: "40000000-0000-4000-8000-000000000006",
+  podologyService: "40000000-0000-4000-8000-000000000007",
 };
 
 function madridToday() {
@@ -107,6 +110,7 @@ test(
     let pool = new Pool({ connectionString: databaseUrl, max: 6 });
     let app = createApp(pool, config);
     await app.ready();
+    const sessionTokenHashes = new Set();
 
     const appRequest = (method, url, session, payload, extraHeaders = {}) =>
       app.inject({
@@ -133,10 +137,8 @@ test(
       });
       assert.equal(csrfResponse.statusCode, 200);
       const csrfToken = csrfResponse.json().data.token;
-      const csrfCookie = String(csrfResponse.headers["set-cookie"]).split(
-        ";",
-        1,
-      )[0];
+      const csrfSetCookie = String(csrfResponse.headers["set-cookie"]);
+      const csrfCookie = csrfSetCookie.split(";", 1)[0];
       const login = await app.inject({
         method: "POST",
         url: "/api/dev/session",
@@ -155,11 +157,30 @@ test(
       const sessionCookie = String(
         cookies.find((value) => String(value).startsWith("bookfit_session=")),
       ).split(";", 1)[0];
-      return { cookie: `${csrfCookie}; ${sessionCookie}`, csrfToken };
+      const sessionSetCookie = String(
+        cookies.find((value) => String(value).startsWith("bookfit_session=")),
+      );
+      const sessionToken = decodeURIComponent(sessionCookie.split("=", 2)[1]);
+      sessionTokenHashes.add(
+        createHash("sha256").update(sessionToken).digest("hex"),
+      );
+      return {
+        cookie: `${csrfCookie}; ${sessionCookie}`,
+        csrfToken,
+        csrfSetCookie,
+        sessionSetCookie,
+        sessionToken,
+      };
     }
 
     t.after(async () => {
       await app.close();
+      if (sessionTokenHashes.size > 0) {
+        await pool.query(
+          "UPDATE bookfit.dev_sessions SET revoked_at=COALESCE(revoked_at,now()) WHERE token_hash=ANY($1::text[])",
+          [[...sessionTokenHashes]],
+        );
+      }
       await pool.end();
     });
 
@@ -718,6 +739,282 @@ test(
           {},
         );
         assert.equal(cleanup.statusCode, 200, cleanup.body);
+      },
+    );
+
+    await t.test(
+      "la concurrencia bloquea dos reservas del mismo profesional a la misma hora",
+      async () => {
+        const date = dateAfter(7);
+        const availability = await appRequest(
+          "GET",
+          `/api/availability?serviceId=${ids.personalService}&mode=online&date=${date}`,
+        );
+        assert.equal(availability.statusCode, 200, availability.body);
+        const slot = availability
+          .json()
+          .data.slots.find((item) => item.startMinute >= 12 * 60);
+        assert.ok(slot, "La seed debe ofrecer un horario de tarde libre.");
+        const body = {
+          serviceId: ids.personalService,
+          mode: "online",
+          seats: 1,
+          slots: [{ date: slot.date, startMinute: slot.startMinute }],
+        };
+        const checkout = (session, key) =>
+          appRequest("POST", "/api/checkouts", session, body, {
+            "idempotency-key": key,
+          });
+        const [first, second] = await Promise.all([
+          checkout(client, `professional-race-a-${crypto.randomUUID()}`),
+          checkout(anotherClient, `professional-race-b-${crypto.randomUUID()}`),
+        ]);
+        assert.deepEqual(
+          [first.statusCode, second.statusCode].sort(),
+          [201, 409],
+        );
+        const winner = first.statusCode === 201 ? first : second;
+        const winnerSession = first.statusCode === 201 ? client : anotherClient;
+        const checkoutId = winner.json().data.checkoutId;
+        const release = await appRequest(
+          "POST",
+          `/api/dev/checkouts/${checkoutId}/pay`,
+          winnerSession,
+          { outcome: "failure" },
+          { "idempotency-key": `professional-cleanup-${crypto.randomUUID()}` },
+        );
+        assert.equal(release.statusCode, 200, release.body);
+        assert.equal(release.json().data.status, "failed");
+      },
+    );
+
+    await t.test(
+      "la concurrencia evita reservar la misma sala para dos profesionales",
+      async () => {
+        const date = dateAfter(7);
+        const [physioAvailability, podologyAvailability] = await Promise.all([
+          appRequest(
+            "GET",
+            `/api/availability?serviceId=${ids.physioService}&mode=room&date=${date}`,
+          ),
+          appRequest(
+            "GET",
+            `/api/availability?serviceId=${ids.podologyService}&mode=room&date=${date}`,
+          ),
+        ]);
+        assert.equal(physioAvailability.statusCode, 200);
+        assert.equal(podologyAvailability.statusCode, 200);
+        const sharedRoomId = "50000000-0000-4000-8000-000000000002";
+        const physioSlots = physioAvailability.json().data.slots;
+        const podologySlots = podologyAvailability.json().data.slots;
+        const physioSlot = physioSlots.find(
+          (slot) =>
+            slot.startMinute >= 12 * 60 &&
+            slot.spaces.some((space) => space.id === sharedRoomId) &&
+            podologySlots.some(
+              (candidate) =>
+                candidate.startMinute === slot.startMinute &&
+                candidate.spaces.some((space) => space.id === sharedRoomId),
+            ),
+        );
+        assert.ok(
+          physioSlot,
+          "La seed debe ofrecer un horario común en Consulta Azul.",
+        );
+        const podologySlot = podologySlots.find(
+          (slot) => slot.startMinute === physioSlot.startMinute,
+        );
+        assert.ok(podologySlot);
+        const create = (session, serviceId, slot, key) =>
+          appRequest(
+            "POST",
+            "/api/checkouts",
+            session,
+            {
+              serviceId,
+              mode: "room",
+              seats: 1,
+              slots: [
+                {
+                  date: slot.date,
+                  startMinute: slot.startMinute,
+                  spaceId: sharedRoomId,
+                },
+              ],
+            },
+            { "idempotency-key": key },
+          );
+        const [first, second] = await Promise.all([
+          create(
+            client,
+            ids.physioService,
+            physioSlot,
+            `room-race-a-${crypto.randomUUID()}`,
+          ),
+          create(
+            anotherClient,
+            ids.podologyService,
+            podologySlot,
+            `room-race-b-${crypto.randomUUID()}`,
+          ),
+        ]);
+        assert.deepEqual(
+          [first.statusCode, second.statusCode].sort(),
+          [201, 409],
+        );
+        const winner = first.statusCode === 201 ? first : second;
+        const winnerSession = first.statusCode === 201 ? client : anotherClient;
+        const release = await appRequest(
+          "POST",
+          `/api/dev/checkouts/${winner.json().data.checkoutId}/pay`,
+          winnerSession,
+          { outcome: "failure" },
+          { "idempotency-key": `room-cleanup-${crypto.randomUUID()}` },
+        );
+        assert.equal(release.statusCode, 200, release.body);
+        assert.equal(release.json().data.status, "failed");
+      },
+    );
+
+    await t.test(
+      "los reintentos concurrentes con la misma clave crean un solo checkout y pago",
+      async () => {
+        const date = dateAfter(7);
+        const availability = await appRequest(
+          "GET",
+          `/api/availability?serviceId=${ids.personalService}&mode=online&date=${date}`,
+        );
+        assert.equal(availability.statusCode, 200, availability.body);
+        const slot = availability
+          .json()
+          .data.slots.find((item) => item.startMinute >= 14 * 60);
+        assert.ok(slot, "La seed debe ofrecer un horario online libre.");
+        const body = {
+          serviceId: ids.personalService,
+          mode: "online",
+          seats: 1,
+          slots: [{ date: slot.date, startMinute: slot.startMinute }],
+        };
+        const checkoutKey = `checkout-retry-${crypto.randomUUID()}`;
+        const create = () =>
+          appRequest("POST", "/api/checkouts", client, body, {
+            "idempotency-key": checkoutKey,
+          });
+        const [first, replay] = await Promise.all([create(), create()]);
+        assert.equal(first.statusCode, 201, first.body);
+        assert.equal(replay.statusCode, 201, replay.body);
+        assert.equal(
+          replay.json().data.checkoutId,
+          first.json().data.checkoutId,
+        );
+        const checkoutId = first.json().data.checkoutId;
+        const checkoutKeyCount = await pool.query(
+          "SELECT count(*)::int AS total FROM bookfit.idempotency_keys WHERE actor_id=$1 AND operation='checkout' AND key=$2",
+          [ids.client, checkoutKey],
+        );
+        assert.equal(checkoutKeyCount.rows[0].total, 1);
+
+        const paymentKey = `payment-retry-${crypto.randomUUID()}`;
+        const pay = () =>
+          appRequest(
+            "POST",
+            `/api/dev/checkouts/${checkoutId}/pay`,
+            client,
+            { outcome: "success" },
+            { "idempotency-key": paymentKey },
+          );
+        const [paid, paymentReplay] = await Promise.all([pay(), pay()]);
+        assert.equal(paid.statusCode, 200, paid.body);
+        assert.equal(paymentReplay.statusCode, 200, paymentReplay.body);
+        assert.deepEqual(paymentReplay.json().data, paid.json().data);
+        assert.equal(paid.json().data.status, "paid");
+        const paymentEvents = await pool.query(
+          "SELECT count(*)::int AS total FROM bookfit.payment_events WHERE payment_attempt_id=(SELECT id FROM bookfit.payment_attempts WHERE order_id=$1)",
+          [checkoutId],
+        );
+        assert.equal(paymentEvents.rows[0].total, 1);
+        const occurrences = await pool.query(
+          "SELECT count(*)::int AS total FROM bookfit.booking_occurrences WHERE order_id=$1",
+          [checkoutId],
+        );
+        assert.equal(occurrences.rows[0].total, 1);
+        const cancellation = await appRequest(
+          "POST",
+          `/api/occurrences/${first.json().data.occurrences[0].id}/cancel`,
+          client,
+          {},
+        );
+        assert.equal(cancellation.statusCode, 200, cancellation.body);
+      },
+    );
+
+    await t.test(
+      "sesiones, cookies y origen protegen mutaciones y caducan correctamente",
+      async () => {
+        const session = await signIn(ids.client);
+        assert.match(session.sessionSetCookie, /Path=\//);
+        assert.match(session.sessionSetCookie, /HttpOnly/i);
+        assert.match(session.sessionSetCookie, /SameSite=Strict/i);
+        assert.match(session.sessionSetCookie, /Max-Age=7200/i);
+        assert.doesNotMatch(session.sessionSetCookie, /; Secure/i);
+        assert.match(session.csrfSetCookie, /Path=\//);
+        assert.match(session.csrfSetCookie, /SameSite=Strict/i);
+        assert.match(session.csrfSetCookie, /Max-Age=3600/i);
+
+        const hostileOrigin = await appRequest(
+          "DELETE",
+          "/api/dev/session",
+          session,
+          undefined,
+          { origin: "https://attacker.example" },
+        );
+        assert.equal(hostileOrigin.statusCode, 403);
+        assert.equal(hostileOrigin.json().error.code, "origin_denied");
+        assert.equal(
+          (await appRequest("GET", "/api/me", session)).json().data.actorId,
+          ids.client,
+          "El origen inválido no debe revocar la sesión.",
+        );
+        const agendaPath = `/api/agenda?from=${agendaFrom}&to=${agendaTo}`;
+        assert.equal(
+          (await appRequest("GET", agendaPath, session)).statusCode,
+          200,
+        );
+
+        const badCsrf = await appRequest(
+          "DELETE",
+          "/api/dev/session",
+          session,
+          undefined,
+          { "x-csrf-token": "incorrect-token" },
+        );
+        assert.equal(badCsrf.statusCode, 403);
+        assert.equal(badCsrf.json().error.code, "csrf_invalid");
+
+        const logout = await appRequest("DELETE", "/api/dev/session", session);
+        assert.equal(logout.statusCode, 200, logout.body);
+        assert.equal(logout.json().data.signedOut, true);
+        const clearedCookie = String(logout.headers["set-cookie"]);
+        assert.match(clearedCookie, /bookfit_session=;/);
+        assert.match(clearedCookie, /Max-Age=0/i);
+        assert.match(clearedCookie, /HttpOnly/i);
+        assert.equal(
+          (await appRequest("GET", agendaPath, session)).statusCode,
+          401,
+        );
+
+        const expiringSession = await signIn(ids.client);
+        const tokenHash = createHash("sha256")
+          .update(expiringSession.sessionToken)
+          .digest("hex");
+        const expired = await pool.query(
+          "UPDATE bookfit.dev_sessions SET expires_at=now()-interval '1 second' WHERE token_hash=$1 AND revoked_at IS NULL",
+          [tokenHash],
+        );
+        assert.equal(expired.rowCount, 1);
+        const expiredMe = await appRequest("GET", agendaPath, expiringSession);
+        assert.equal(expiredMe.statusCode, 401);
+        assert.equal(expiredMe.json().error.code, "session_required");
       },
     );
   },

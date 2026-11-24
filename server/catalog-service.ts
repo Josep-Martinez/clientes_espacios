@@ -361,10 +361,10 @@ export async function getAvailability(
           `SELECT sp.id,sp.name,sp.slug,sp.kind,sp.location_id,sp.capacity,sp.equipment,sp.amenities,sp.description,
               sp.price_per_occurrence_cents,l.name AS location_name,oh.opens_at::text,oh.closes_at::text
          FROM bookfit.spaces sp JOIN bookfit.locations l ON l.id=sp.location_id
-         LEFT JOIN bookfit.space_opening_hours oh ON oh.space_id=sp.id AND oh.weekday=$2
-        WHERE sp.kind=$1 AND sp.capacity >= $3 AND sp.equipment @> $4::text[] AND oh.space_id IS NOT NULL
+         LEFT JOIN bookfit.space_opening_hours oh ON oh.space_id=sp.id AND oh.weekday=$3
+        WHERE sp.kind=$1 AND sp.capacity >= $2 AND sp.equipment @> $4::text[] AND oh.space_id IS NOT NULL
         ORDER BY sp.name`,
-          [input.mode, input.seats, service.required_equipment, weekday],
+          [input.mode, input.seats, weekday, service.required_equipment],
         )
       : {
           rows: [] as Array<

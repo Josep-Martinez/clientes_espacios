@@ -19,6 +19,7 @@ Desde la raíz del repositorio:
 
 ```bash
 pnpm install --frozen-lockfile
+pnpm exec playwright install chromium
 pnpm local:start
 pnpm exec supabase db reset --local
 pnpm local:env
@@ -67,7 +68,7 @@ pnpm supabase:types
 pnpm quality:check
 ```
 
-`pnpm supabase:types` genera `src/types/database.types.ts` desde la base local y el esquema `bookfit`; no edites ese archivo a mano. El quality gate común comprueba formato, ESLint (incluida la prohibición de `any`), sincronización de tipos, TypeScript, pruebas unitarias y de integración, build, dependencias y secretos. Para ejecutar solo una parte:
+`pnpm supabase:types` genera `src/types/database.types.ts` desde la base local y el esquema `bookfit`; no edites ese archivo a mano. El quality gate común comprueba formato, ESLint (incluida la prohibición de `any`), sincronización de tipos, TypeScript, pruebas unitarias, integración, pgTAP y E2E en Chromium, build, dependencias y secretos. `pnpm test:db` requiere Supabase local con migraciones y seeds aplicadas. `pnpm test:e2e` ejecuta los recorridos en navegador; en CI utiliza la base Supabase efímera del workflow. Para ejecutar solo una parte:
 
 ```bash
 pnpm format:check
@@ -75,6 +76,8 @@ pnpm lint
 pnpm typecheck
 pnpm test
 pnpm test:integration
+pnpm test:db
+pnpm test:e2e
 pnpm build
 pnpm security:check
 ```

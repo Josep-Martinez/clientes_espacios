@@ -125,6 +125,13 @@ export interface Checkout {
   occurrences: Array<{ id: string; date: string; start: string; end: string }>;
 }
 
+export type CheckoutPaymentResult = Pick<
+  Checkout,
+  "checkoutId" | "totalCents"
+> & {
+  status: Exclude<Checkout["status"], "pending">;
+};
+
 export interface AgendaEvent {
   bookingId: string;
   occurrenceId: string;
