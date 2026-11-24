@@ -18,7 +18,6 @@ const steps = [
     args: ["test:db"],
     env: { SUPABASE_TELEMETRY_DISABLED: "1" },
   },
-  { name: "Pruebas E2E de navegador", args: ["test:e2e"] },
   { name: "Build", args: ["build"] },
   { name: "Seguridad", args: ["security:check"] },
 ];

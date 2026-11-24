@@ -402,6 +402,11 @@ export default function App() {
           )}
         </nav>
         <button
+          aria-label={
+            actor
+              ? `Perfil local de ${actor.name}`
+              : "Perfil local: modo público"
+          }
           className="bf-profile"
           onClick={() => setSessionOpen(true)}
           type="button"

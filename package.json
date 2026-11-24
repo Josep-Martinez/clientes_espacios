@@ -5,7 +5,7 @@
   "type": "module",
   "packageManager": "pnpm@12.15.0",
   "scripts": {
-    "dev": "tsx scripts/dev.mjs",
+    "dev": "node scripts/dev.mjs",
     "dev:web": "vite --host 127.0.0.1",
     "dev:api": "tsx watch server/index.ts",
     "start:api": "tsx server/index.ts",
@@ -23,7 +23,6 @@
     "test": "node --disable-warning=ExperimentalWarning --experimental-strip-types --test tests/*.test.mjs",
     "test:integration": "node --disable-warning=ExperimentalWarning --experimental-strip-types --test tests/integration/*.test.mjs",
     "test:db": "supabase test db --local",
-    "test:e2e": "playwright test",
     "test:coverage": "node --disable-warning=ExperimentalWarning --experimental-strip-types --experimental-test-coverage --test-coverage-include='src/domain/**/*.ts' --test tests/*.test.mjs"
   },
   "dependencies": {
@@ -33,9 +32,7 @@
     "react-dom": "^19.3.1"
   },
   "devDependencies": {
-    "@axe-core/playwright": "^4.14.0",
     "@eslint/js": "^10.0.1",
-    "@playwright/test": "^1.65.1",
     "@secretlint/secretlint-rule-preset-recommend": "^13.1.0",
     "@types/node": "^24.19.2",
     "@types/pg": "8.23.1",

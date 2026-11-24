@@ -17,7 +17,7 @@ En producción, propuesta de alojamiento: Supabase administrado en Frankfurt par
 | Supabase alojado y Auth | Base y cuentas reales en la fase siguiente | [Repositorio](https://github.com/supabase/supabase) · [SDK](https://github.com/supabase/supabase-js) · [Regiones](https://supabase.com/docs/guides/platform/regions) |
 | Render | Opción de alojamiento del servidor y del frontend compilado | [Servicios web](https://render.com/docs/web-services) |
 | Stripe Checkout, Connect y SDK Node | Fases posteriores de cobro, onboarding y reparto | [SDK](https://github.com/stripe/stripe-node) · [Ejemplo de pago único](https://github.com/stripe-samples/checkout-one-time-payments) · [Connect](https://docs.stripe.com/connect/separate-charges-and-transfers) |
-| Node test runner y Playwright | Pruebas unitarias existentes, integración y recorridos completos | [Playwright](https://github.com/microsoft/playwright) |
+| Node test runner | Pruebas unitarias e integración de API y base de datos | [Node.js](https://nodejs.org/api/test.html) |
 | Dependabot y CI | Dependencias, comprobaciones y prevención de regresiones | [Dependabot](https://docs.github.com/en/code-security/dependabot) |
 
 Instalar dependencias oficiales con versión fijada en el lockfile. Los repos anteriores son componentes y referencias, no una certificación del producto. Usar el ejemplo de Stripe como referencia de Checkout, sin asumir que cubre Connect ni todas las obligaciones de un marketplace. Antes de copiar código, revisar licencia, releases, compatibilidad y avisos de seguridad. No hace falta incorporar un repositorio de chat, un calendario externo ni un marketplace prefabricado.

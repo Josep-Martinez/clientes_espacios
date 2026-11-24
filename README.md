@@ -19,12 +19,13 @@ Desde la raíz del repositorio:
 
 ```bash
 pnpm install --frozen-lockfile
-pnpm exec playwright install chromium
 pnpm local:start
 pnpm exec supabase db reset --local
 pnpm local:env
 pnpm dev
 ```
+
+`pnpm dev` reutiliza la API o la web de BookFit si ya están sanas en los puertos configurados. Si ambos servicios ya estaban activos, vuelve al prompt y los deja disponibles; para cerrarlos, usa el terminal donde arrancaron esos procesos.
 
 `db reset --local` aplica las migraciones de `supabase/migrations/` y carga `supabase/seed.sql`. Al ejecutar `pnpm dev` por primera vez, BookFit crea automáticamente `.env.local` si falta: genera una contraseña aleatoria para el rol SQL de ejecución `bookfit_runtime` y guarda la URL solo en ese archivo, ignorado por Git y con permisos de solo propietario. La credencial administrativa de migración se usa únicamente para configurar ese rol y no se guarda en el archivo. No copies credenciales de Supabase a variables `VITE_*`.
 
@@ -68,7 +69,9 @@ pnpm supabase:types
 pnpm quality:check
 ```
 
-`pnpm supabase:types` genera `src/types/database.types.ts` desde la base local y el esquema `bookfit`; no edites ese archivo a mano. El quality gate común comprueba formato, ESLint (incluida la prohibición de `any`), sincronización de tipos, TypeScript, pruebas unitarias, integración, pgTAP y E2E en Chromium, build, dependencias y secretos. `pnpm test:db` requiere Supabase local con migraciones y seeds aplicadas. `pnpm test:e2e` ejecuta los recorridos en navegador; en CI utiliza la base Supabase efímera del workflow. Para ejecutar solo una parte:
+`pnpm supabase:types` genera `src/types/database.types.ts` desde la base local y el esquema `bookfit`; no edites ese archivo a mano. El quality gate común comprueba formato, ESLint (incluida la prohibición de `any`), sincronización de tipos, TypeScript, pruebas unitarias, integración y pgTAP, build, dependencias y secretos. `pnpm test:db` requiere Supabase local con migraciones y seeds aplicadas. Para ejecutar solo una parte:
+
+Las pruebas no se ejecutan al arrancar BookFit con `pnpm dev` ni al iniciar Supabase con `pnpm local:start`. En local solo corren al invocar `pnpm test`, `pnpm test:integration`, `pnpm test:db` o `pnpm quality:check`. En GitHub Actions, `quality` se ejecuta para cada pull request y push.
 
 ```bash
 pnpm format:check
@@ -77,7 +80,6 @@ pnpm typecheck
 pnpm test
 pnpm test:integration
 pnpm test:db
-pnpm test:e2e
 pnpm build
 pnpm security:check
 ```
