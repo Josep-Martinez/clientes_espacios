@@ -5,23 +5,6 @@ export type BookingMode = 'room' | 'gym' | 'home' | 'online';
 export type ServiceFormat = 'individual' | 'group';
 export type DemoRole = 'client' | 'professional' | 'space';
 
-export interface DemoConversationMessage {
-  id: string;
-  senderId: string;
-  body: string;
-  createdAt: string;
-}
-
-export interface DemoConversation {
-  id: string;
-  clientId: string;
-  clientName: string;
-  professionalId: string;
-  status: 'pending' | 'accepted' | 'declined';
-  requestedAt: string;
-  messages: DemoConversationMessage[];
-}
-
 export interface ProfessionalPreferences {
   baseLocationId: string;
   maxRadiusKm: number;
@@ -115,13 +98,6 @@ export interface DemoWaitlistEntry {
   status: 'waitlisted';
   chargeCents: 0;
   occupiesSeat: false;
-}
-
-export interface DemoState {
-  bookings: DemoBooking[];
-  waitlist: DemoWaitlistEntry[];
-  preferencesByProfessional: Record<string, ProfessionalPreferences>;
-  conversations: DemoConversation[];
 }
 
 export interface DemoSpaceRecord {

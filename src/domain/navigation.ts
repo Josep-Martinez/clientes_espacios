@@ -7,7 +7,6 @@ export type AppPage =
   | 'profile'
   | 'my-space'
   | 'agenda'
-  | 'messages'
   | 'how-it-works';
 
 export interface NavigationItem {
