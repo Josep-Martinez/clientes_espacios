@@ -67,8 +67,9 @@ function money(cents: number): string {
   return (cents / 100).toLocaleString('es-ES', { style: 'currency', currency: 'EUR' });
 }
 
-function initials(name: string): string {
-  return name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join('');
+function initials(name: string | null | undefined): string {
+  const safeName = typeof name === 'string' && name.trim() ? name : 'BookFit';
+  return safeName.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join('') || 'BF';
 }
 
 function startOfToday(): string {

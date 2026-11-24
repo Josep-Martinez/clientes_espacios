@@ -107,6 +107,11 @@ test('BookFit API: permisos, solicitudes, pagos persistentes y concurrencia', { 
     const catalog = await appRequest('GET', '/api/catalog');
     assert.equal(catalog.statusCode, 200);
     assert.ok(catalog.json().data.services.length > 0);
+    const service = catalog.json().data.services[0];
+    assert.equal(typeof service.professionalName, 'string');
+    assert.equal(typeof service.professionalHeadline, 'string');
+    assert.equal(typeof service.professionalZone, 'string');
+    assert.equal(typeof service.professionalRating, 'number');
     assert.equal(JSON.stringify(catalog.json()).includes('access_instructions'), false);
     const rejected = await app.inject({ method: 'POST', url: '/api/dev/session', payload: { profileId: ids.client } });
     assert.equal(rejected.statusCode, 403);

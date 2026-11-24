@@ -3,7 +3,8 @@ import { assertBookableDate, createLocalInterval, isProfessionalIntervalAvailabl
 import { ApiError, type BookingMode } from './contracts.ts';
 
 interface ServiceRecord {
-  id: string; professional_id: string; name: string; category: string; description: string;
+  id: string; professional_id: string; professional_name: string; professional_headline: string;
+  professional_zone: string; professional_rating: number | string; name: string; category: string; description: string;
   service_format: 'individual' | 'group'; duration_minutes: number; price_cents: number;
   modalities: string[]; required_equipment: string[]; group_capacity: number | null; class_activity: string | null;
 }
@@ -35,7 +36,9 @@ export async function getCatalog(pool: Pool, search: string): Promise<Record<str
         ORDER BY p.rating DESC,a.display_name LIMIT 100`, [pattern],
     ),
     pool.query<ServiceRecord>(
-      `SELECT s.id,s.professional_id,s.name,s.category,s.description,s.service_format,s.duration_minutes,s.price_cents,
+      `SELECT s.id,s.professional_id,a.display_name AS professional_name,p.headline AS professional_headline,
+              p.public_zone AS professional_zone,p.rating AS professional_rating,
+              s.name,s.category,s.description,s.service_format,s.duration_minutes,s.price_cents,
               s.modalities,s.required_equipment,s.group_capacity,s.class_activity
          FROM bookfit.services s JOIN bookfit.professionals p ON p.id=s.professional_id
          JOIN bookfit.actors a ON a.id=p.actor_id
@@ -58,7 +61,9 @@ export async function getCatalog(pool: Pool, search: string): Promise<Record<str
     locations: locations.rows.map((row) => ({ id: row.id, slug: row.slug, name: row.name, isOnline: row.is_online })),
     professionals: professionalData,
     services: services.rows.map((row) => ({
-      id: row.id, professionalId: row.professional_id, name: row.name, category: row.category, description: row.description,
+      id: row.id, professionalId: row.professional_id, professionalName: row.professional_name,
+      professionalHeadline: row.professional_headline, professionalZone: row.professional_zone,
+      professionalRating: Number(row.professional_rating), name: row.name, category: row.category, description: row.description,
       format: row.service_format, durationMinutes: row.duration_minutes, priceCents: row.price_cents,
       modalities: row.modalities, requiredEquipment: row.required_equipment, groupCapacity: row.group_capacity,
       classActivity: row.class_activity,
