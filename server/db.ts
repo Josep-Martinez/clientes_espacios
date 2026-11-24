@@ -1,5 +1,5 @@
-import pg, { type PoolClient, type QueryResult, type QueryResultRow } from 'pg';
-import type { ServerConfig } from './config.ts';
+import pg, { type PoolClient, type QueryResult, type QueryResultRow } from "pg";
+import type { ServerConfig } from "./config.ts";
 
 const { Pool } = pg;
 
@@ -10,7 +10,7 @@ export function createPool(config: ServerConfig): pg.Pool {
     idleTimeoutMillis: 10_000,
     connectionTimeoutMillis: 4_000,
     statement_timeout: 5_000,
-    application_name: 'bookfit-local-api',
+    application_name: "bookfit-local-api",
   });
 }
 
@@ -20,12 +20,12 @@ export async function inTransaction<T>(
 ): Promise<T> {
   const client = await pool.connect();
   try {
-    await client.query('BEGIN');
+    await client.query("BEGIN");
     const result = await operation(client);
-    await client.query('COMMIT');
+    await client.query("COMMIT");
     return result;
   } catch (error) {
-    await client.query('ROLLBACK');
+    await client.query("ROLLBACK");
     throw error;
   } finally {
     client.release();

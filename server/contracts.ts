@@ -1,5 +1,5 @@
-export type ActorRole = 'client' | 'professional' | 'space_manager';
-export type BookingMode = 'room' | 'gym' | 'home' | 'online';
+export type ActorRole = "client" | "professional" | "space_manager";
+export type BookingMode = "room" | "gym" | "home" | "online";
 
 export interface ActorContext {
   actorId: string;
@@ -11,14 +11,14 @@ export interface ActorContext {
 
 export interface CheckoutLine {
   occurrenceId: string;
-  kind: 'service' | 'service_commission' | 'space' | 'space_commission';
+  kind: "service" | "service_commission" | "space" | "space_commission";
   description: string;
   amountCents: number;
 }
 
 export interface CheckoutResult {
   checkoutId: string;
-  status: 'pending' | 'paid' | 'failed' | 'expired';
+  status: "pending" | "paid" | "failed" | "expired";
   holdExpiresAt: string | null;
   totalCents: number;
   lines: CheckoutLine[];

@@ -1,4 +1,4 @@
-export type SpaceKind = 'room' | 'gym';
+export type SpaceKind = "room" | "gym";
 
 export interface SpaceOpeningInterval {
   date: string;
@@ -31,7 +31,7 @@ export interface SpaceReservation {
   date: string;
   start: number;
   end: number;
-  status: 'confirmed' | 'cancelled' | 'pending';
+  status: "confirmed" | "cancelled" | "pending";
 }
 
 export interface SpaceRequest {
@@ -79,7 +79,7 @@ function hasConflict(
     (reservation) =>
       reservation.spaceId === space.id &&
       reservation.date === request.date &&
-      reservation.status === 'confirmed' &&
+      reservation.status === "confirmed" &&
       request.start < reservation.end &&
       reservation.start < request.end,
   );
@@ -90,7 +90,7 @@ export function findCompatibleSpaces(input: {
   request: SpaceRequest;
   reservations: SpaceReservation[];
   travel: SpaceDistanceModel;
-}): Array<Omit<DemoSpace, 'accessInstructions'>> {
+}): Array<Omit<DemoSpace, "accessInstructions">> {
   const { spaces, request, reservations, travel } = input;
 
   return spaces
@@ -99,8 +99,10 @@ export function findCompatibleSpaces(input: {
         space.equipment.includes(item),
       );
       const withinProfessionalRadius =
-        travel.distanceKm(request.professionalBaseLocationId, space.locationId) <=
-        request.professionalMaxRadiusKm;
+        travel.distanceKm(
+          request.professionalBaseLocationId,
+          space.locationId,
+        ) <= request.professionalMaxRadiusKm;
       const nearClientArea =
         travel.distanceKm(request.preferredAreaLocationId, space.locationId) <=
         request.maxClientDistanceKm;
@@ -115,5 +117,8 @@ export function findCompatibleSpaces(input: {
         !hasConflict(space, request, reservations)
       );
     })
-    .map(({ accessInstructions: _privateInstructions, ...publicSpace }) => publicSpace);
+    .map(
+      ({ accessInstructions: _privateInstructions, ...publicSpace }) =>
+        publicSpace,
+    );
 }

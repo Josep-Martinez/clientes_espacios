@@ -1,9 +1,9 @@
-import type { PrivateCommitment } from './availability.ts';
-import type { SpaceOpeningHours, SpaceKind } from './spaces.ts';
+import type { PrivateCommitment } from "./availability.ts";
+import type { SpaceOpeningHours, SpaceKind } from "./spaces.ts";
 
-export type BookingMode = 'room' | 'gym' | 'home' | 'online';
-export type ServiceFormat = 'individual' | 'group';
-export type DemoRole = 'client' | 'professional' | 'space';
+export type BookingMode = "room" | "gym" | "home" | "online";
+export type ServiceFormat = "individual" | "group";
+export type DemoRole = "client" | "professional" | "space";
 
 export interface ProfessionalPreferences {
   baseLocationId: string;
@@ -66,7 +66,7 @@ export interface DemoBookingOccurrence {
   date: string;
   start: number;
   end: number;
-  status: 'pending' | 'confirmed' | 'cancelled';
+  status: "pending" | "confirmed" | "cancelled";
   sessionId?: string;
   locationId: string;
   /** Sample space fee allocated to this occurrence; 0 for a complimentary entry. */
@@ -84,7 +84,7 @@ export interface DemoBooking {
   mode: BookingMode;
   seats: number;
   seriesId: string | null;
-  paymentStatus: 'simulated-succeeded';
+  paymentStatus: "simulated-succeeded";
   occurrences: DemoBookingOccurrence[];
 }
 
@@ -95,7 +95,7 @@ export interface DemoWaitlistEntry {
   serviceId: string;
   date: string;
   seats: number;
-  status: 'waitlisted';
+  status: "waitlisted";
   chargeCents: 0;
   occupiesSeat: false;
 }

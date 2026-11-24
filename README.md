@@ -18,9 +18,10 @@ Consulta el [plan funcional y técnico de BookFit](docs/implementacion/PLAN_BOOK
 Desde la raíz del repositorio:
 
 ```bash
-pnpm install
+pnpm install --frozen-lockfile
 pnpm local:start
 pnpm exec supabase db reset --local
+pnpm local:env
 pnpm dev
 ```
 
@@ -37,10 +38,17 @@ pnpm local:start
 pnpm dev
 ```
 
-Para volver a aplicar migraciones y regenerar los datos semilla de BookFit:
+Para reconstruir la base local desde las migraciones y regenerar los datos semilla de BookFit:
 
 ```bash
 pnpm exec supabase db reset --local
+pnpm local:env
+```
+
+El reset borra los datos locales. Si quieres aplicar solo migraciones pendientes y conservar los datos actuales, usa:
+
+```bash
+pnpm exec supabase migration up --local
 ```
 
 El reset elimina los datos de la base local. No lo ejecutes si quieres conservar las reservas y datos actuales. Si ya existía `.env.local`, el reset también elimina el rol SQL que contiene; después del reset vuelve a ejecutar `pnpm local:env` una vez antes de `pnpm dev`.
@@ -55,13 +63,25 @@ pnpm local:start
 ## Comprobaciones
 
 ```bash
+pnpm supabase:types
+pnpm quality:check
+```
+
+`pnpm supabase:types` genera `src/types/database.types.ts` desde la base local y el esquema `bookfit`; no edites ese archivo a mano. El quality gate común comprueba formato, ESLint (incluida la prohibición de `any`), sincronización de tipos, TypeScript, pruebas unitarias y de integración, build, dependencias y secretos. Para ejecutar solo una parte:
+
+```bash
+pnpm format:check
+pnpm lint
 pnpm typecheck
 pnpm test
 pnpm test:integration
 pnpm build
+pnpm security:check
 ```
 
-Las pruebas de integración requieren Supabase local iniciado, migraciones y seeds aplicadas y `.env.local` generado. Comprueban aislamiento de roles, CSRF, reservas, pago idempotente, cancelación, lista de espera y concurrencia sobre las plazas y recursos.
+Las pruebas de integración requieren Supabase local iniciado, migraciones y seeds aplicadas y `.env.local` generado. Comprueban aislamiento de roles, CSRF, reservas, pago idempotente, cancelación, lista de espera y concurrencia sobre las plazas y recursos. El quality gate las marca como obligatorias: si no hay base local loopback, falla en lugar de omitirlas. CI crea su propia Supabase local efímera y no necesita credenciales de nube.
+
+Las migraciones locales se aplican con `supabase migration up --local` o se reconstruyen con `supabase db reset --local`. `supabase db push` publica migraciones en el proyecto remoto enlazado; no uses `supabase link` ni `db push` para el ciclo de desarrollo local. La autenticación actual es el selector de perfiles semilla con sesión local de servidor, no Supabase Auth. Así se pueden probar permisos y recorridos de clientes, profesionales, gestores y doble rol; el login real con un proveedor se integrará más adelante contra un proyecto separado de pruebas antes de elegir la base definitiva.
 
 ## Desarrollo posterior
 

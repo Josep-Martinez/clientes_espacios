@@ -6,7 +6,7 @@ export interface TimeSlot {
 }
 
 export interface PrivateCommitment {
-  kind: 'appointment' | 'block';
+  kind: "appointment" | "block";
   start: number;
   end: number;
   locationId?: string;
@@ -25,15 +25,14 @@ export interface TravelModel {
 }
 
 export type AvailabilityReason =
-  | 'conflict'
-  | 'outside-radius'
-  | 'travel-before'
-  | 'travel-after'
-  | 'invalid-interval';
+  | "conflict"
+  | "outside-radius"
+  | "travel-before"
+  | "travel-after"
+  | "invalid-interval";
 
 export type AvailabilityResult =
-  | { available: true }
-  | { available: false; reason: AvailabilityReason };
+  { available: true } | { available: false; reason: AvailabilityReason };
 
 function overlaps(left: TimeSlot, right: PrivateCommitment): boolean {
   return left.start < right.end && right.start < left.end;
@@ -70,37 +69,49 @@ export function checkCandidateAvailability(input: {
     !Number.isFinite(candidate.end) ||
     candidate.start >= candidate.end
   ) {
-    return { available: false, reason: 'invalid-interval' };
+    return { available: false, reason: "invalid-interval" };
   }
 
   if (commitments.some((commitment) => overlaps(candidate, commitment))) {
-    return { available: false, reason: 'conflict' };
+    return { available: false, reason: "conflict" };
   }
 
-  if (travel.distanceKm(profile.baseLocationId, candidate.locationId) > profile.maxRadiusKm) {
-    return { available: false, reason: 'outside-radius' };
+  if (
+    travel.distanceKm(profile.baseLocationId, candidate.locationId) >
+    profile.maxRadiusKm
+  ) {
+    return { available: false, reason: "outside-radius" };
   }
 
   const appointments = commitments.filter(
-    (commitment) => commitment.kind === 'appointment' && commitment.locationId,
+    (commitment) => commitment.kind === "appointment" && commitment.locationId,
   );
   const previous = nearestPrevious(candidate, appointments);
 
   if (previous?.locationId) {
-    const travelMinutes = travel.travelMinutes(previous.locationId, candidate.locationId);
+    const travelMinutes = travel.travelMinutes(
+      previous.locationId,
+      candidate.locationId,
+    );
     const earliestStart = previous.end + travelMinutes + profile.bufferMinutes;
-    if (travelMinutes > profile.maxTravelMinutes || candidate.start < earliestStart) {
-      return { available: false, reason: 'travel-before' };
+    if (
+      travelMinutes > profile.maxTravelMinutes ||
+      candidate.start < earliestStart
+    ) {
+      return { available: false, reason: "travel-before" };
     }
   }
 
   const next = nearestNext(candidate, appointments);
 
   if (next?.locationId) {
-    const travelMinutes = travel.travelMinutes(candidate.locationId, next.locationId);
+    const travelMinutes = travel.travelMinutes(
+      candidate.locationId,
+      next.locationId,
+    );
     const latestEnd = next.start - travelMinutes - profile.bufferMinutes;
     if (travelMinutes > profile.maxTravelMinutes || candidate.end > latestEnd) {
-      return { available: false, reason: 'travel-after' };
+      return { available: false, reason: "travel-after" };
     }
   }
 
@@ -113,15 +124,16 @@ export function filterViableSlots(input: {
   profile: AvailabilityProfile;
   commitments: PrivateCommitment[];
   travel: TravelModel;
-}): Array<Pick<TimeSlot, 'start' | 'end' | 'locationId'>> {
+}): Array<Pick<TimeSlot, "start" | "end" | "locationId">> {
   return input.candidates
-    .filter((candidate) =>
-      checkCandidateAvailability({
-        candidate,
-        profile: input.profile,
-        commitments: input.commitments,
-        travel: input.travel,
-      }).available,
+    .filter(
+      (candidate) =>
+        checkCandidateAvailability({
+          candidate,
+          profile: input.profile,
+          commitments: input.commitments,
+          travel: input.travel,
+        }).available,
     )
     .map(({ start, end, locationId }) => ({ start, end, locationId }));
 }
