@@ -20,13 +20,11 @@ Desde la raíz del repositorio:
 ```bash
 pnpm install
 pnpm local:start
-pnpm exec supabase status
 pnpm exec supabase db reset --local
-pnpm local:env
 pnpm dev
 ```
 
-`db reset --local` aplica las migraciones de `supabase/migrations/` y carga `supabase/seed.sql`. Si Supabase muestra las credenciales por defecto en el estado local, no las copies a Vite: `pnpm local:env` crea una contraseña aleatoria para el rol SQL de ejecución `bookfit_runtime` y guarda la URL en `.env.local`, ignorado por Git y con permisos de solo propietario. La credencial administrativa de migración se usa solo para configurar ese rol y no se guarda en el archivo.
+`db reset --local` aplica las migraciones de `supabase/migrations/` y carga `supabase/seed.sql`. Al ejecutar `pnpm dev` por primera vez, BookFit crea automáticamente `.env.local` si falta: genera una contraseña aleatoria para el rol SQL de ejecución `bookfit_runtime` y guarda la URL solo en ese archivo, ignorado por Git y con permisos de solo propietario. La credencial administrativa de migración se usa únicamente para configurar ese rol y no se guarda en el archivo. No copies credenciales de Supabase a variables `VITE_*`.
 
 La API y Vite se enlazan a `127.0.0.1`. Abre <http://127.0.0.1:5173>. El selector local permite probar clientes, profesionales, gestores y una cuenta con doble rol, sin registro.
 
@@ -43,10 +41,9 @@ Para volver a aplicar migraciones y regenerar los datos semilla de BookFit:
 
 ```bash
 pnpm exec supabase db reset --local
-pnpm local:env
 ```
 
-El reset elimina los datos de la base local identificada como `bookfit-v1-local`. No lo ejecutes si quieres conservar los datos de BookFit de esa instancia. Tras un reset hay que volver a ejecutar `pnpm local:env`, porque el rol de runtime se crea de nuevo.
+El reset elimina los datos de la base local. No lo ejecutes si quieres conservar las reservas y datos actuales. Si ya existía `.env.local`, el reset también elimina el rol SQL que contiene; después del reset vuelve a ejecutar `pnpm local:env` una vez antes de `pnpm dev`.
 
 Para reiniciar solo la aplicación, detén `pnpm dev` con `Ctrl+C` y vuelve a iniciarlo. PostgreSQL conserva las reservas pagadas. Para detener y reanudar Supabase sin resetear la base:
 

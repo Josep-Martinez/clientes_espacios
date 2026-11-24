@@ -34,6 +34,7 @@ const ids = {
   seededOccurrence: '71000000-0000-4000-8000-000000000003',
   dualRoleOccurrence: '71000000-0000-4000-8000-000000000005',
   pilatesService: '40000000-0000-4000-8000-000000000003',
+  personalService: '40000000-0000-4000-8000-000000000001',
 };
 
 function madridToday() {
@@ -147,6 +148,22 @@ test('BookFit API: permisos, solicitudes, pagos persistentes y concurrencia', { 
     assert.equal(recipientCanMarkRead.statusCode, 200);
     const unrelated = await appRequest('GET', '/api/information-requests', client);
     assert.equal(unrelated.json().data.items.some((item) => item.id === requestId), false);
+
+    const sentToManager = await appRequest('POST', '/api/information-requests', professional, {
+      bookingOccurrenceId: ids.seededOccurrence, recipientKind: 'space_manager', body: 'El acceso será por la puerta lateral.',
+    });
+    assert.equal(sentToManager.statusCode, 201, sentToManager.body);
+    const managerInbox = await appRequest('GET', '/api/information-requests', manager);
+    assert.ok(managerInbox.json().data.items.some((item) => item.body === 'El acceso será por la puerta lateral.'));
+  });
+
+  await t.test('el profesional consulta y actualiza sus preferencias; el cliente no puede hacerlo', async () => {
+    const current = await appRequest('GET', '/api/professional/preferences', professional);
+    assert.equal(current.statusCode, 200, current.body);
+    const saved = await appRequest('PATCH', '/api/professional/preferences', professional, current.json().data);
+    assert.equal(saved.statusCode, 200, saved.body);
+    const forbidden = await appRequest('PATCH', '/api/professional/preferences', client, current.json().data);
+    assert.equal(forbidden.statusCode, 403);
   });
 
   await t.test('la agenda deduplica el doble rol cuando una misma reserva le corresponde por profesional y gestor', async () => {
@@ -175,6 +192,69 @@ test('BookFit API: permisos, solicitudes, pagos persistentes y concurrencia', { 
     const fullClass = classes.json().data.items.find((item) => item.serviceId === ids.pilatesService && item.availableSeats === 0);
     const waiting = await appRequest('POST', `/api/classes/${fullClass.id}/waitlist`, client, { seats: 1 });
     assert.equal(waiting.statusCode, 200, waiting.body);
+  });
+
+  await t.test('el fallo y la caducidad del pago liberan retención y plaza sin duplicar eventos', async () => {
+    const list = await appRequest('GET', `/api/classes?from=${agendaFrom}&to=${agendaTo}`);
+    const yoga = list.json().data.items.find((item) => item.serviceId === '40000000-0000-4000-8000-000000000004' && item.availableSeats > 0);
+    assert.ok(yoga, 'La seed debe ofrecer una clase de Yoga disponible.');
+    for (const outcome of ['failure', 'expired']) {
+      const checkoutResponse = await appRequest('POST', '/api/checkouts', client, {
+        serviceId: yoga.serviceId, mode: 'room', seats: 1,
+        slots: [{ date: yoga.date, startMinute: yoga.startMinute, spaceId: yoga.spaceId, classSessionId: yoga.id }],
+      }, { 'idempotency-key': `${outcome}-${crypto.randomUUID()}` });
+      assert.equal(checkoutResponse.statusCode, 201, checkoutResponse.body);
+      const checkout = checkoutResponse.json().data;
+      const paymentKey = `result-${crypto.randomUUID()}`;
+      const result = await appRequest('POST', `/api/dev/checkouts/${checkout.checkoutId}/pay`, client, { outcome }, {
+        'idempotency-key': paymentKey,
+      });
+      assert.equal(result.statusCode, 200, result.body);
+      assert.equal(result.json().data.status, outcome === 'failure' ? 'failed' : 'expired');
+      const replay = await appRequest('POST', `/api/dev/checkouts/${checkout.checkoutId}/pay`, client, { outcome }, {
+        'idempotency-key': paymentKey,
+      });
+      assert.deepEqual(replay.json().data, result.json().data);
+      const eventCount = await pool.query(
+        'SELECT count(*)::int AS total FROM bookfit.payment_events WHERE payment_attempt_id=(SELECT id FROM bookfit.payment_attempts WHERE order_id=$1)',
+        [checkout.checkoutId],
+      );
+      assert.equal(eventCount.rows[0].total, 1);
+      const refreshed = await appRequest('GET', `/api/classes?from=${agendaFrom}&to=${agendaTo}`);
+      const refreshedYoga = refreshed.json().data.items.find((item) => item.id === yoga.id);
+      assert.ok(refreshedYoga.availableSeats > 0, `La retención ${outcome} debe devolver la plaza.`);
+    }
+  });
+
+  await t.test('la cancelación afecta solo la fecha elegida de una reserva recurrente', async () => {
+    const firstDate = dateAfter(5);
+    const secondDate = dateAfter(12);
+    const [firstAvailability, secondAvailability] = await Promise.all([
+      appRequest('GET', `/api/availability?serviceId=${ids.personalService}&mode=online&date=${firstDate}`),
+      appRequest('GET', `/api/availability?serviceId=${ids.personalService}&mode=online&date=${secondDate}`),
+    ]);
+    assert.equal(firstAvailability.statusCode, 200, firstAvailability.body);
+    assert.equal(secondAvailability.statusCode, 200, secondAvailability.body);
+    const firstSlot = firstAvailability.json().data.slots[0];
+    const secondSlot = secondAvailability.json().data.slots[0];
+    assert.ok(firstSlot && secondSlot, 'La disponibilidad semilla debe ofrecer ambos días.');
+    const checkoutResponse = await appRequest('POST', '/api/checkouts', client, {
+      serviceId: ids.personalService, mode: 'online', seats: 1,
+      slots: [firstSlot, secondSlot].map((slot) => ({ date: slot.date, startMinute: slot.startMinute })),
+    }, { 'idempotency-key': `series-${crypto.randomUUID()}` });
+    assert.equal(checkoutResponse.statusCode, 201, checkoutResponse.body);
+    const checkout = checkoutResponse.json().data;
+    const paid = await appRequest('POST', `/api/dev/checkouts/${checkout.checkoutId}/pay`, client, { outcome: 'success' }, {
+      'idempotency-key': `series-pay-${crypto.randomUUID()}`,
+    });
+    assert.equal(paid.statusCode, 200, paid.body);
+    const [first, second] = checkout.occurrences;
+    const otherClientCannotCancel = await appRequest('POST', `/api/occurrences/${first.id}/cancel`, anotherClient, {});
+    assert.equal(otherClientCannotCancel.statusCode, 404);
+    const cancelled = await appRequest('POST', `/api/occurrences/${first.id}/cancel`, client, {});
+    assert.equal(cancelled.statusCode, 200, cancelled.body);
+    assert.equal((await appRequest('GET', `/api/bookings/${first.id}`, client)).json().data.status, 'cancelled');
+    assert.equal((await appRequest('GET', `/api/bookings/${second.id}`, client)).json().data.status, 'confirmed');
   });
 
   await t.test('el pago idempotente sobrevive al reinicio del servidor y sigue visible en agenda', async () => {
