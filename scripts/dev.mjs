@@ -1,9 +1,11 @@
 import { spawn, spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 
+const pnpmCommand = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
+
 if (!existsSync(".env.local")) {
   process.stdout.write("Configurando credenciales locales de BookFit…\n");
-  const setup = spawnSync("pnpm", ["local:env"], {
+  const setup = spawnSync(pnpmCommand, ["local:env"], {
     cwd: process.cwd(),
     env: process.env,
     stdio: "inherit",
@@ -67,7 +69,7 @@ const scripts = [
 if (scripts.length === 0) process.exit(0);
 
 const children = scripts.map((script) =>
-  spawn("pnpm", ["run", script], {
+  spawn(pnpmCommand, ["run", script], {
     cwd: process.cwd(),
     stdio: "inherit",
     env: process.env,

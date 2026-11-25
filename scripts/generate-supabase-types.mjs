@@ -5,8 +5,9 @@ import prettier from "prettier";
 
 const target = resolve("src/types/database.types.ts");
 const checkOnly = process.argv.includes("--check");
+const pnpmCommand = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
 const result = spawnSync(
-  "pnpm",
+  pnpmCommand,
   [
     "exec",
     "supabase",
