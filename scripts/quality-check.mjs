@@ -11,7 +11,7 @@ const steps = [
   {
     name: "Pruebas de integración",
     args: ["test:integration"],
-    env: { BOOKFIT_REQUIRE_INTEGRATION: "true" },
+    env: { BUQFIT_REQUIRE_INTEGRATION: "true" },
   },
   {
     name: "Pruebas SQL",

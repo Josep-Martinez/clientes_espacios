@@ -4,8 +4,8 @@ import type pg from "pg";
 import { ApiError, type ActorContext, type ActorRole } from "./contracts.ts";
 import type { ServerConfig } from "./config.ts";
 
-const SESSION_COOKIE = "bookfit_session";
-const CSRF_COOKIE = "bookfit_csrf";
+const SESSION_COOKIE = "buqfit_session";
+const CSRF_COOKIE = "buqfit_csrf";
 
 export function readCookie(
   request: FastifyRequest,
@@ -114,11 +114,11 @@ export async function readActorContext(
             COALESCE(array_agg(DISTINCT ar.role) FILTER (WHERE ar.role IS NOT NULL), '{}') AS roles,
             max(p.id::text)::uuid AS professional_id,
             COALESCE(array_agg(DISTINCT sm.space_id::text) FILTER (WHERE sm.space_id IS NOT NULL), '{}')::text[] AS space_ids
-       FROM bookfit.dev_sessions ds
-       JOIN bookfit.actors a ON a.id=ds.actor_id
-       LEFT JOIN bookfit.actor_roles ar ON ar.actor_id=a.id
-       LEFT JOIN bookfit.professionals p ON p.actor_id=a.id
-       LEFT JOIN bookfit.space_memberships sm ON sm.actor_id=a.id
+       FROM buqfit.dev_sessions ds
+       JOIN buqfit.actors a ON a.id=ds.actor_id
+       LEFT JOIN buqfit.actor_roles ar ON ar.actor_id=a.id
+       LEFT JOIN buqfit.professionals p ON p.actor_id=a.id
+       LEFT JOIN buqfit.space_memberships sm ON sm.actor_id=a.id
       WHERE ds.token_hash=$1 AND ds.revoked_at IS NULL AND ds.expires_at>now()
       GROUP BY a.id, a.display_name`,
     [hashSessionToken(token)],
@@ -144,7 +144,7 @@ export async function createDemoSession(
   if (!config.devProfiles)
     throw new ApiError(404, "No encontrado.", "not_found");
   const actor = await pool.query<{ id: string }>(
-    "SELECT id FROM bookfit.actors WHERE id=$1 AND is_demo=true",
+    "SELECT id FROM buqfit.actors WHERE id=$1 AND is_demo=true",
     [profileId],
   );
   if (!actor.rowCount)
@@ -159,12 +159,12 @@ export async function createDemoSession(
     await client.query("BEGIN");
     if (currentToken) {
       await client.query(
-        "UPDATE bookfit.dev_sessions SET revoked_at=now() WHERE token_hash=$1 AND revoked_at IS NULL",
+        "UPDATE buqfit.dev_sessions SET revoked_at=now() WHERE token_hash=$1 AND revoked_at IS NULL",
         [hashSessionToken(currentToken)],
       );
     }
     await client.query(
-      `INSERT INTO bookfit.dev_sessions(token_hash,actor_id,expires_at)
+      `INSERT INTO buqfit.dev_sessions(token_hash,actor_id,expires_at)
        VALUES ($1,$2,now()+($3::text||' hours')::interval)`,
       [hashSessionToken(token), profileId, config.sessionTtlHours],
     );
@@ -186,9 +186,9 @@ export async function createDemoSession(
             COALESCE(array_agg(DISTINCT ar.role) FILTER (WHERE ar.role IS NOT NULL), '{}') AS roles,
             max(p.id::text)::uuid AS professional_id,
             COALESCE(array_agg(DISTINCT sm.space_id::text) FILTER (WHERE sm.space_id IS NOT NULL), '{}')::text[] AS space_ids
-       FROM bookfit.actors a LEFT JOIN bookfit.actor_roles ar ON ar.actor_id=a.id
-       LEFT JOIN bookfit.professionals p ON p.actor_id=a.id
-       LEFT JOIN bookfit.space_memberships sm ON sm.actor_id=a.id
+       FROM buqfit.actors a LEFT JOIN buqfit.actor_roles ar ON ar.actor_id=a.id
+       LEFT JOIN buqfit.professionals p ON p.actor_id=a.id
+       LEFT JOIN buqfit.space_memberships sm ON sm.actor_id=a.id
       WHERE a.id=$1 GROUP BY a.id,a.display_name`,
     [profileId],
   );
@@ -217,7 +217,7 @@ export async function revokeDemoSession(
 ): Promise<void> {
   if (!token) return;
   await pool.query(
-    "UPDATE bookfit.dev_sessions SET revoked_at=now() WHERE token_hash=$1 AND revoked_at IS NULL",
+    "UPDATE buqfit.dev_sessions SET revoked_at=now() WHERE token_hash=$1 AND revoked_at IS NULL",
     [hashSessionToken(token)],
   );
 }

@@ -1,22 +1,22 @@
-# Prompt estratégico de BookFit para MiroFish
+# Prompt estratégico de BuqFit para MiroFish
 
 ## Para qué sirve
 
-Esta versión explora el **negocio y sus segmentos de adopción**, no el diseño de pantallas. MiroFish no navegará por BookFit ni comprobará el funcionamiento de la web.
+Esta versión explora el **negocio y sus segmentos de adopción**, no el diseño de pantallas. MiroFish no navegará por BuqFit ni comprobará el funcionamiento de la web.
 
 ## Preparación
 
-1. Sube `semilla_bookfit_mirofish.md` como material semilla.
-2. Nombre sugerido: **BookFit — segmentos y enfoque de lanzamiento**.
+1. Sube `semilla_buqfit_mirofish.md` como material semilla.
+2. Nombre sugerido: **BuqFit — segmentos y enfoque de lanzamiento**.
 3. Pega el bloque siguiente en el requisito de simulación.
 
 ## Requisito de simulación
 
 ```text
-Simula la reacción ante el anuncio hipotético de un piloto local de BookFit, un marketplace que conecta clientes, profesionales de bienestar/entrenamiento y gestores de espacios. Usa la semilla como fuente de hechos sobre el proyecto. El piloto en Valencia es solo un escenario; BookFit aún no está lanzada.
+Simula la reacción ante el anuncio hipotético de un piloto local de BuqFit, un marketplace que conecta clientes, profesionales de bienestar/entrenamiento y gestores de espacios. Usa la semilla como fuente de hechos sobre el proyecto. El piloto en Valencia es solo un escenario; BuqFit aún no está lanzada.
 
 PREGUNTA
-¿Qué segmentos tienen una necesidad suficientemente clara como para probar BookFit, repetir su uso o aportar oferta? ¿Qué debería construir o validar primero el equipo para mejorar las posibilidades del negocio?
+¿Qué segmentos tienen una necesidad suficientemente clara como para probar BuqFit, repetir su uso o aportar oferta? ¿Qué debería construir o validar primero el equipo para mejorar las posibilidades del negocio?
 
 Haz una simulación crítica, no una presentación promocional. Incluye agentes de todos estos grupos y también personas escépticas: clientes de diferentes servicios; entrenadores que necesitan espacio, trabajan sin espacio externo o ya tienen centro propio; profesionales de otras categorías; gestores de salas/estudios/gimnasios; y personas con doble rol. No fijes una cantidad de agentes como si fuera una muestra estadística.
 
@@ -43,7 +43,7 @@ REGLAS
 - No conviertas el número de agentes, publicaciones u opiniones en porcentajes de población o cuota de mercado.
 - No inventes usuarios, frecuencia, precios aceptados, ingresos, CAC, competidores, tamaño de mercado ni acuerdos con espacios.
 - No afirmes que los agentes han usado o navegado por la demo.
-- Incluye objeciones y escenarios en los que BookFit no tendría sentido.
+- Incluye objeciones y escenarios en los que BuqFit no tendría sentido.
 ```
 
 ## Contexto adicional opcional
@@ -51,9 +51,9 @@ REGLAS
 Si MiroFish tiene un campo separado para contexto, pega esto:
 
 ```text
-BookFit es una idea con una demo local de datos ficticios. No hay usuarios activos, entrevistas, acuerdos con espacios, reservas reales ni datos de conversión en el material. Buscamos decidir qué segmento merece validarse primero, qué valor tendría que ofrecer BookFit y qué partes de la propuesta conviene posponer. El resultado debe servir para diseñar investigación real, no para afirmar que existe demanda.
+BuqFit es una idea con una demo local de datos ficticios. No hay usuarios activos, entrevistas, acuerdos con espacios, reservas reales ni datos de conversión en el material. Buscamos decidir qué segmento merece validarse primero, qué valor tendría que ofrecer BuqFit y qué partes de la propuesta conviene posponer. El resultado debe servir para diseñar investigación real, no para afirmar que existe demanda.
 ```
 
 ## Qué esperar
 
-La petición está formulada como un escenario de lanzamiento y reacción de agentes porque MiroFish construye un mundo simulado a partir de materiales semilla y requisitos en lenguaje natural. El resultado puede sugerir objeciones y pruebas de negocio; **no puede demostrar que muchos usuarios reales adoptarían BookFit**. Para eso hacen falta entrevistas y señales de comportamiento real. Consulta el [flujo descrito por MiroFish](https://github.com/666ghj/MiroFish#workflow).
+La petición está formulada como un escenario de lanzamiento y reacción de agentes porque MiroFish construye un mundo simulado a partir de materiales semilla y requisitos en lenguaje natural. El resultado puede sugerir objeciones y pruebas de negocio; **no puede demostrar que muchos usuarios reales adoptarían BuqFit**. Para eso hacen falta entrevistas y señales de comportamiento real. Consulta el [flujo descrito por MiroFish](https://github.com/666ghj/MiroFish#workflow).

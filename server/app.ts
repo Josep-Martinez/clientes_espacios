@@ -178,7 +178,7 @@ export function createApp(pool: Pool, config: ServerConfig): FastifyInstance {
     }
     // Avoid logging request bodies, cookies, SQL, or database connection details.
     console.error(
-      "BookFit API error:",
+      "BuqFit API error:",
       candidate.name,
       candidate.code ?? "unclassified",
     );
@@ -213,7 +213,7 @@ export function createApp(pool: Pool, config: ServerConfig): FastifyInstance {
   }
 
   app.get("/api/health", async () =>
-    success({ status: "ok", service: "BookFit API" }),
+    success({ status: "ok", service: "BuqFit API" }),
   );
 
   app.get("/api/csrf", async (_request, reply) => {
@@ -255,8 +255,8 @@ export function createApp(pool: Pool, config: ServerConfig): FastifyInstance {
               COALESCE(array_agg(DISTINCT ar.role) FILTER(WHERE ar.role IS NOT NULL),'{}') AS roles,
               max(p.id::text)::uuid AS professional_id,
               COALESCE(array_agg(DISTINCT sm.space_id::text) FILTER(WHERE sm.space_id IS NOT NULL),'{}')::text[] AS space_ids
-         FROM bookfit.actors a JOIN bookfit.actor_roles ar ON ar.actor_id=a.id
-         LEFT JOIN bookfit.professionals p ON p.actor_id=a.id LEFT JOIN bookfit.space_memberships sm ON sm.actor_id=a.id
+         FROM buqfit.actors a JOIN buqfit.actor_roles ar ON ar.actor_id=a.id
+         LEFT JOIN buqfit.professionals p ON p.actor_id=a.id LEFT JOIN buqfit.space_memberships sm ON sm.actor_id=a.id
         WHERE a.is_demo=true GROUP BY a.id,a.display_name ORDER BY a.display_name`,
       );
       return success({
@@ -285,7 +285,7 @@ export function createApp(pool: Pool, config: ServerConfig): FastifyInstance {
     },
     async (request, reply) => {
       const body = request.body as { profileId: string };
-      const currentToken = readCookie(request, "bookfit_session");
+      const currentToken = readCookie(request, "buqfit_session");
       const session = await createDemoSession(
         pool,
         body.profileId,
@@ -298,7 +298,7 @@ export function createApp(pool: Pool, config: ServerConfig): FastifyInstance {
   );
 
   app.delete("/api/dev/session", async (request, reply) => {
-    await revokeDemoSession(pool, readCookie(request, "bookfit_session"));
+    await revokeDemoSession(pool, readCookie(request, "buqfit_session"));
     clearSessionCookie(reply, config);
     return success({ signedOut: true });
   });

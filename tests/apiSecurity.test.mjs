@@ -9,7 +9,7 @@ const config = {
   host: "127.0.0.1",
   port: 3001,
   databaseUrl: new URL(
-    "postgresql:" + "//bookfit:local@127.0.0.1/postgres",
+    "postgresql:" + "//buqfit_runtime:local@127.0.0.1/postgres",
   ).toString(),
   devProfiles: true,
   paymentMode: "fake",
@@ -17,18 +17,18 @@ const config = {
   appOrigins: ["http://127.0.0.1:5173"],
 };
 
-describe("BookFit API security invariants", () => {
+describe("BuqFit API security invariants", () => {
   it("refuses demo profiles or fake payments in production configuration", () => {
-    const keys = ["NODE_ENV", "BOOKFIT_DEV_PROFILES", "BOOKFIT_PAYMENT_MODE"];
+    const keys = ["NODE_ENV", "BUQFIT_DEV_PROFILES", "BUQFIT_PAYMENT_MODE"];
     const previous = new Map(keys.map((key) => [key, process.env[key]]));
     try {
       process.env.NODE_ENV = "production";
-      process.env.BOOKFIT_DEV_PROFILES = "true";
-      process.env.BOOKFIT_PAYMENT_MODE = "disabled";
+      process.env.BUQFIT_DEV_PROFILES = "true";
+      process.env.BUQFIT_PAYMENT_MODE = "disabled";
       assert.throws(() => readServerConfig(), /Production cannot start/);
 
-      process.env.BOOKFIT_DEV_PROFILES = "false";
-      process.env.BOOKFIT_PAYMENT_MODE = "fake";
+      process.env.BUQFIT_DEV_PROFILES = "false";
+      process.env.BUQFIT_PAYMENT_MODE = "fake";
       assert.throws(() => readServerConfig(), /Production cannot start/);
     } finally {
       for (const [key, value] of previous) {

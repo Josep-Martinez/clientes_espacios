@@ -10,7 +10,7 @@ export function createPool(config: ServerConfig): pg.Pool {
     idleTimeoutMillis: 10_000,
     connectionTimeoutMillis: 4_000,
     statement_timeout: 5_000,
-    application_name: "bookfit-local-api",
+    application_name: "buqfit-local-api",
   });
 }
 

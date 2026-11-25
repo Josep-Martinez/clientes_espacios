@@ -7,7 +7,7 @@ export type Json =
   | Json[];
 
 export type Database = {
-  bookfit: {
+  buqfit: {
     Tables: {
       actor_roles: {
         Row: {
@@ -1257,7 +1257,7 @@ type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">;
 
 type DefaultSchema = DatabaseWithoutInternals[Extract<
   keyof Database,
-  "bookfit"
+  "buqfit"
 >];
 
 export type Tables<
@@ -1371,7 +1371,7 @@ export type CompositeTypes<
     : never;
 
 export const Constants = {
-  bookfit: {
+  buqfit: {
     Enums: {},
   },
 } as const;

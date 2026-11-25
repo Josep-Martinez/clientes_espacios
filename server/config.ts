@@ -28,13 +28,13 @@ export interface ServerConfig {
 export function readServerConfig(): ServerConfig {
   loadLocalEnvironment();
   const nodeEnv = process.env.NODE_ENV ?? "development";
-  const devProfiles = process.env.BOOKFIT_DEV_PROFILES === "true";
+  const devProfiles = process.env.BUQFIT_DEV_PROFILES === "true";
   const paymentMode =
-    process.env.BOOKFIT_PAYMENT_MODE ??
+    process.env.BUQFIT_PAYMENT_MODE ??
     (nodeEnv === "production" ? "disabled" : "fake");
   if (!["fake", "disabled"].includes(paymentMode)) {
     throw new Error(
-      "Stripe is not installed in this phase. BOOKFIT_PAYMENT_MODE must be fake or disabled.",
+      "Stripe is not installed in this phase. BUQFIT_PAYMENT_MODE must be fake or disabled.",
     );
   }
   if (nodeEnv === "production" && (devProfiles || paymentMode === "fake")) {

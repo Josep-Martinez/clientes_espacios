@@ -1,11 +1,11 @@
-# BookFit — documentación funcional y técnica
+# BuqFit — documentación funcional y técnica
 
 **Estado:** primera versión local funcional  
 **Alcance:** aplicación local de desarrollo; no es una plataforma de producción.
 
 ## 1. Producto y arquitectura
 
-BookFit conecta clientes que buscan sesiones o clases de bienestar con profesionales y gestores de salas o gimnasios. La versión local conserva React, Vite y TypeScript, y añade una API Fastify y PostgreSQL levantado mediante Supabase CLI y Docker.
+BuqFit conecta clientes que buscan sesiones o clases de bienestar con profesionales y gestores de salas o gimnasios. La versión local conserva React, Vite y TypeScript, y añade una API Fastify y PostgreSQL levantado mediante Supabase CLI y Docker.
 
 El navegador se comunica únicamente con `/api`. Fastify resuelve la sesión, permisos por objeto, disponibilidad, precios, retenciones, reservas, pagos simulados, preferencias, métricas y solicitudes de información. PostgreSQL conserva las reservas y el historial de pago al reiniciar la aplicación. No se usa `localStorage` para el estado de negocio.
 
@@ -70,9 +70,9 @@ La ruta de pago de prueba se habilita solo con la configuración local prevista 
 
 ## 5. Datos y seguridad
 
-La migración crea el esquema privado `bookfit`, fuera de los esquemas expuestos por la Data API. Modela actores, roles, identidades futuras, sesiones de desarrollo, profesionales, preferencias, servicios, ubicaciones, espacios, horarios, clases, pedidos, retenciones, reservas, plazas, pagos, listas de espera, solicitudes y auditoría.
+La migración crea el esquema privado `buqfit`, fuera de los esquemas expuestos por la Data API. Modela actores, roles, identidades futuras, sesiones de desarrollo, profesionales, preferencias, servicios, ubicaciones, espacios, horarios, clases, pedidos, retenciones, reservas, plazas, pagos, listas de espera, solicitudes y auditoría.
 
-La credencial administrativa se utiliza para las migraciones y la creación del rol de ejecución. La API usa el rol `bookfit_runtime`, cuya conexión real se guarda en `.env.local` ignorado por Git y no se envía al cliente. `.env.example` solo contiene valores de ejemplo. Los servicios de desarrollo se enlazan a `127.0.0.1`.
+La credencial administrativa se utiliza para las migraciones y la creación del rol de ejecución. La API usa el rol `buqfit_runtime`, cuya conexión real se guarda en `.env.local` ignorado por Git y no se envía al cliente. `.env.example` solo contiene valores de ejemplo. Los servicios de desarrollo se enlazan a `127.0.0.1`.
 
 Además de los permisos por objeto, la API aplica cookies de sesión `HttpOnly` y `SameSite`, CSRF y validación del origen en mutaciones, límites de frecuencia, límites de tamaño, cabeceras de seguridad y errores que no exponen SQL ni secretos. El acceso directo desde Supabase Auth o la Data API no forma parte de esta versión.
 
@@ -91,7 +91,7 @@ pnpm local:env
 pnpm dev
 ```
 
-`local:start` prepara la red Docker de BookFit con puertos publicados solo en loopback y arranca Supabase. `db reset --local` borra y reconstruye la base local de BookFit con `supabase/migrations/` y `supabase/seed.sql`; no enlaza ni ejecuta cambios contra Cloud. `local:env` crea `.env.local` con la URL de PostgreSQL local y una contraseña aleatoria del rol `bookfit_runtime`.
+`local:start` prepara la red Docker de BuqFit con puertos publicados solo en loopback y arranca Supabase. `db reset --local` borra y reconstruye la base local de BuqFit con `supabase/migrations/` y `supabase/seed.sql`; no enlaza ni ejecuta cambios contra Cloud. `local:env` crea `.env.local` con la URL de PostgreSQL local y una contraseña aleatoria del rol `buqfit_runtime`.
 
 Abre <http://127.0.0.1:5173>. Para detener la aplicación, usa `Ctrl+C`. Para detener Supabase sin borrar los datos y volver a arrancarlo, ejecuta:
 
@@ -120,4 +120,4 @@ Quedan para iteraciones futuras Supabase Auth, identidades verificadas, pagos re
 
 ---
 
-**Mantenimiento:** actualizar este documento junto con la API, las migraciones y la interfaz cuando cambien los flujos locales de BookFit.
+**Mantenimiento:** actualizar este documento junto con la API, las migraciones y la interfaz cuando cambien los flujos locales de BuqFit.

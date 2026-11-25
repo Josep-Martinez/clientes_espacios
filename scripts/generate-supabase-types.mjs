@@ -15,7 +15,7 @@ const result = spawnSync(
     "typescript",
     "--local",
     "--schema",
-    "bookfit",
+    "buqfit",
   ],
   {
     cwd: process.cwd(),
@@ -60,6 +60,6 @@ if (checkOnly) {
   await mkdir(dirname(target), { recursive: true });
   await writeFile(target, generated, { mode: 0o644 });
   process.stdout.write(
-    "Tipos TypeScript generados desde el esquema local bookfit.\n",
+    "Tipos TypeScript generados desde el esquema local buqfit.\n",
   );
 }

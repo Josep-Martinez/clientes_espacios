@@ -2,7 +2,7 @@ import { spawn, spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 
 if (!existsSync(".env.local")) {
-  process.stdout.write("Configurando credenciales locales de BookFit…\n");
+  process.stdout.write("Configurando credenciales locales de BuqFit…\n");
   const setup = spawnSync("pnpm", ["local:env"], {
     cwd: process.cwd(),
     env: process.env,
@@ -16,47 +16,47 @@ if (!existsSync(".env.local")) {
   }
 }
 
-async function isBookFitApiAvailable() {
+async function isBuqFitApiAvailable() {
   const apiUrl = `http://127.0.0.1:${process.env.API_PORT ?? 3001}/api/health`;
   const response = await fetch(apiUrl, {
     signal: AbortSignal.timeout(500),
   });
   if (!response.ok) return false;
   const payload = await response.json();
-  return payload?.success === true && payload?.data?.service === "BookFit API";
+  return payload?.success === true && payload?.data?.service === "BuqFit API";
 }
 
-async function isBookFitWebAvailable() {
+async function isBuqFitWebAvailable() {
   const webUrl = `http://127.0.0.1:${process.env.VITE_PORT ?? 5173}/`;
   const response = await fetch(webUrl, {
     signal: AbortSignal.timeout(500),
   });
   if (!response.ok) return false;
   const html = await response.text();
-  return html.includes("BookFit") && html.includes("/src/main.tsx");
+  return html.includes("BuqFit") && html.includes("/src/main.tsx");
 }
 
 let reuseApi = false;
 let reuseWeb = false;
 try {
-  reuseApi = await isBookFitApiAvailable();
+  reuseApi = await isBuqFitApiAvailable();
 } catch {
   // No API is listening yet; start the normal local server below.
 }
 try {
-  reuseWeb = await isBookFitWebAvailable();
+  reuseWeb = await isBuqFitWebAvailable();
 } catch {
-  // No BookFit web server is listening yet; start Vite below.
+  // No BuqFit web server is listening yet; start Vite below.
 }
 
 if (reuseApi) {
   process.stdout.write(
-    `API BookFit ya disponible en 127.0.0.1:${process.env.API_PORT ?? 3001}; se reutiliza.\n`,
+    `API BuqFit ya disponible en 127.0.0.1:${process.env.API_PORT ?? 3001}; se reutiliza.\n`,
   );
 }
 if (reuseWeb) {
   process.stdout.write(
-    `BookFit web ya disponible en 127.0.0.1:${process.env.VITE_PORT ?? 5173}; se reutiliza.\n`,
+    `BuqFit web ya disponible en 127.0.0.1:${process.env.VITE_PORT ?? 5173}; se reutiliza.\n`,
   );
 }
 

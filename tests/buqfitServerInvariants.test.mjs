@@ -7,7 +7,7 @@ import {
   madridLocalInstant,
 } from "../server/availability.ts";
 
-describe("BookFit local date and time invariants", () => {
+describe("BuqFit local date and time invariants", () => {
   it("rejects calendar dates that PostgreSQL would otherwise reject later", () => {
     assert.equal(isDateKey("2026-02-28"), true);
     assert.equal(isDateKey("2026-02-30"), false);

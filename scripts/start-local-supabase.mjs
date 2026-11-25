@@ -22,7 +22,7 @@ if (inspect.status !== 0) {
   );
   if (created.status !== 0) {
     process.stderr.write(
-      `No se pudo preparar la red Docker local de BookFit: ${created.stderr.trim()}\n`,
+      `No se pudo preparar la red Docker local de BuqFit: ${created.stderr.trim()}\n`,
     );
     process.exit(created.status ?? 1);
   }

@@ -4,8 +4,8 @@ import { readFile } from "node:fs/promises";
 import { test } from "node:test";
 
 async function readLocalDatabaseUrl() {
-  if (process.env.BOOKFIT_TEST_DATABASE_URL)
-    return process.env.BOOKFIT_TEST_DATABASE_URL;
+  if (process.env.BUQFIT_TEST_DATABASE_URL)
+    return process.env.BUQFIT_TEST_DATABASE_URL;
   if (process.env.DATABASE_URL) return process.env.DATABASE_URL;
   try {
     const contents = await readFile(
@@ -22,7 +22,7 @@ async function readLocalDatabaseUrl() {
 }
 
 const databaseUrl = await readLocalDatabaseUrl();
-const integrationRequired = process.env.BOOKFIT_REQUIRE_INTEGRATION === "true";
+const integrationRequired = process.env.BUQFIT_REQUIRE_INTEGRATION === "true";
 let skipReason = databaseUrl
   ? undefined
   : "Requiere Supabase local y .env.local; no se encontró DATABASE_URL.";
@@ -34,7 +34,7 @@ if (databaseUrl) {
         "Las pruebas de integración solo admiten una base loopback local.";
   } catch {
     skipReason =
-      "BOOKFIT_TEST_DATABASE_URL no contiene una URL PostgreSQL válida.";
+      "BUQFIT_TEST_DATABASE_URL no contiene una URL PostgreSQL válida.";
   }
 }
 
@@ -88,7 +88,7 @@ function nextProfessionalWorkdayOffset() {
 }
 
 test(
-  "BookFit API: permisos, solicitudes, pagos persistentes y concurrencia",
+  "BuqFit API: permisos, solicitudes, pagos persistentes y concurrencia",
   {
     skip: integrationRequired ? undefined : skipReason,
   },
@@ -155,10 +155,10 @@ test(
         ? login.headers["set-cookie"]
         : [login.headers["set-cookie"]];
       const sessionCookie = String(
-        cookies.find((value) => String(value).startsWith("bookfit_session=")),
+        cookies.find((value) => String(value).startsWith("buqfit_session=")),
       ).split(";", 1)[0];
       const sessionSetCookie = String(
-        cookies.find((value) => String(value).startsWith("bookfit_session=")),
+        cookies.find((value) => String(value).startsWith("buqfit_session=")),
       );
       const sessionToken = decodeURIComponent(sessionCookie.split("=", 2)[1]);
       sessionTokenHashes.add(
@@ -177,7 +177,7 @@ test(
       await app.close();
       if (sessionTokenHashes.size > 0) {
         await pool.query(
-          "UPDATE bookfit.dev_sessions SET revoked_at=COALESCE(revoked_at,now()) WHERE token_hash=ANY($1::text[])",
+          "UPDATE buqfit.dev_sessions SET revoked_at=COALESCE(revoked_at,now()) WHERE token_hash=ANY($1::text[])",
           [[...sessionTokenHashes]],
         );
       }
@@ -531,7 +531,7 @@ test(
           );
           assert.deepEqual(replay.json().data, result.json().data);
           const eventCount = await pool.query(
-            "SELECT count(*)::int AS total FROM bookfit.payment_events WHERE payment_attempt_id=(SELECT id FROM bookfit.payment_attempts WHERE order_id=$1)",
+            "SELECT count(*)::int AS total FROM buqfit.payment_events WHERE payment_attempt_id=(SELECT id FROM buqfit.payment_attempts WHERE order_id=$1)",
             [checkout.checkoutId],
           );
           assert.equal(eventCount.rows[0].total, 1);
@@ -703,7 +703,7 @@ test(
         assert.equal(replay.statusCode, 200);
         assert.equal(replay.json().data.status, "paid");
         const eventCount = await pool.query(
-          "SELECT count(*)::int AS total FROM bookfit.payment_events WHERE payment_attempt_id=(SELECT id FROM bookfit.payment_attempts WHERE order_id=$1)",
+          "SELECT count(*)::int AS total FROM buqfit.payment_events WHERE payment_attempt_id=(SELECT id FROM buqfit.payment_attempts WHERE order_id=$1)",
           [checkout.checkoutId],
         );
         assert.equal(eventCount.rows[0].total, 1);
@@ -909,7 +909,7 @@ test(
         );
         const checkoutId = first.json().data.checkoutId;
         const checkoutKeyCount = await pool.query(
-          "SELECT count(*)::int AS total FROM bookfit.idempotency_keys WHERE actor_id=$1 AND operation='checkout' AND key=$2",
+          "SELECT count(*)::int AS total FROM buqfit.idempotency_keys WHERE actor_id=$1 AND operation='checkout' AND key=$2",
           [ids.client, checkoutKey],
         );
         assert.equal(checkoutKeyCount.rows[0].total, 1);
@@ -929,12 +929,12 @@ test(
         assert.deepEqual(paymentReplay.json().data, paid.json().data);
         assert.equal(paid.json().data.status, "paid");
         const paymentEvents = await pool.query(
-          "SELECT count(*)::int AS total FROM bookfit.payment_events WHERE payment_attempt_id=(SELECT id FROM bookfit.payment_attempts WHERE order_id=$1)",
+          "SELECT count(*)::int AS total FROM buqfit.payment_events WHERE payment_attempt_id=(SELECT id FROM buqfit.payment_attempts WHERE order_id=$1)",
           [checkoutId],
         );
         assert.equal(paymentEvents.rows[0].total, 1);
         const occurrences = await pool.query(
-          "SELECT count(*)::int AS total FROM bookfit.booking_occurrences WHERE order_id=$1",
+          "SELECT count(*)::int AS total FROM buqfit.booking_occurrences WHERE order_id=$1",
           [checkoutId],
         );
         assert.equal(occurrences.rows[0].total, 1);
@@ -995,7 +995,7 @@ test(
         assert.equal(logout.statusCode, 200, logout.body);
         assert.equal(logout.json().data.signedOut, true);
         const clearedCookie = String(logout.headers["set-cookie"]);
-        assert.match(clearedCookie, /bookfit_session=;/);
+        assert.match(clearedCookie, /buqfit_session=;/);
         assert.match(clearedCookie, /Max-Age=0/i);
         assert.match(clearedCookie, /HttpOnly/i);
         assert.equal(
@@ -1008,7 +1008,7 @@ test(
           .update(expiringSession.sessionToken)
           .digest("hex");
         const expired = await pool.query(
-          "UPDATE bookfit.dev_sessions SET expires_at=now()-interval '1 second' WHERE token_hash=$1 AND revoked_at IS NULL",
+          "UPDATE buqfit.dev_sessions SET expires_at=now()-interval '1 second' WHERE token_hash=$1 AND revoked_at IS NULL",
           [tokenHash],
         );
         assert.equal(expired.rowCount, 1);

@@ -1,10 +1,10 @@
-export type BookFitRole = "client" | "professional" | "space_manager";
+export type BuqFitRole = "client" | "professional" | "space_manager";
 export type BookingMode = "room" | "gym" | "home" | "online";
 
-export interface BookFitActor {
+export interface BuqFitActor {
   actorId: string;
   name: string;
-  roles: BookFitRole[];
+  roles: BuqFitRole[];
   professionalId: string | null;
   spaceIds: string[];
 }
@@ -12,7 +12,7 @@ export interface BookFitActor {
 export interface DemoProfile {
   id: string;
   name: string;
-  roles: BookFitRole[];
+  roles: BuqFitRole[];
   professionalId: string | null;
   spaceIds: string[];
 }
@@ -218,7 +218,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     });
   } catch {
     throw new Error(
-      "No se pudo conectar con BookFit. Comprueba que el servidor local esté iniciado.",
+      "No se pudo conectar con BuqFit. Comprueba que el servidor local esté iniciado.",
     );
   }
   let envelope: ApiEnvelope<T>;
@@ -237,7 +237,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   return envelope.data;
 }
 
-export const bookfitApi = {
+export const buqfitApi = {
   get: <T>(path: string) => request<T>(path),
   post: <T>(path: string, body?: unknown, idempotencyKey?: string) =>
     request<T>(path, {

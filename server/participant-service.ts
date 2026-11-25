@@ -56,16 +56,16 @@ export async function getAgenda(
             ca.id AS client_id,ca.display_name AS client_name,p.id AS professional_id,pa.display_name AS professional_name,
             s.id AS service_id,s.name AS service_name,sp.id AS space_id,sp.name AS space_name,o.mode,o.seats,o.total_cents,
             (b.x_service_cents+b.z_service_commission_cents+b.y_space_cents+b.w_space_commission_cents) AS occurrence_total_cents
-       FROM bookfit.booking_occurrences b JOIN bookfit.orders o ON o.id=b.order_id
-       JOIN bookfit.actors ca ON ca.id=o.client_actor_id
-       JOIN bookfit.professionals p ON p.id=o.professional_id JOIN bookfit.actors pa ON pa.id=p.actor_id
-       JOIN bookfit.services s ON s.id=o.service_id LEFT JOIN bookfit.spaces sp ON sp.id=o.space_id
+       FROM buqfit.booking_occurrences b JOIN buqfit.orders o ON o.id=b.order_id
+       JOIN buqfit.actors ca ON ca.id=o.client_actor_id
+       JOIN buqfit.professionals p ON p.id=o.professional_id JOIN buqfit.actors pa ON pa.id=p.actor_id
+       JOIN buqfit.services s ON s.id=o.service_id LEFT JOIN buqfit.spaces sp ON sp.id=o.space_id
       WHERE b.service_date BETWEEN $1::date AND $2::date
         AND b.status<>'pending'
         AND ((o.client_actor_id=$3 AND $4::boolean)
           OR (p.actor_id=$3 AND $5::boolean)
           OR (sp.id IS NOT NULL AND EXISTS (
-            SELECT 1 FROM bookfit.space_memberships sm WHERE sm.space_id=sp.id AND sm.actor_id=$3 AND $6::boolean)))
+            SELECT 1 FROM buqfit.space_memberships sm WHERE sm.space_id=sp.id AND sm.actor_id=$3 AND $6::boolean)))
       ORDER BY b.starts_at,ca.display_name`,
     [
       from,
@@ -136,12 +136,12 @@ export async function getBooking(
             p.id AS professional_id,pa.display_name AS professional_name,s.name AS service_name,sp.id AS space_id,sp.name AS space_name,
             CASE WHEN b.status='confirmed' AND o.status='paid' THEN sp.access_instructions ELSE NULL END AS access_instructions,
             o.mode,o.seats,o.total_cents
-       FROM bookfit.booking_occurrences b JOIN bookfit.orders o ON o.id=b.order_id
-       JOIN bookfit.actors ca ON ca.id=o.client_actor_id JOIN bookfit.professionals p ON p.id=o.professional_id
-       JOIN bookfit.actors pa ON pa.id=p.actor_id JOIN bookfit.services s ON s.id=o.service_id
-       LEFT JOIN bookfit.spaces sp ON sp.id=o.space_id
+       FROM buqfit.booking_occurrences b JOIN buqfit.orders o ON o.id=b.order_id
+       JOIN buqfit.actors ca ON ca.id=o.client_actor_id JOIN buqfit.professionals p ON p.id=o.professional_id
+       JOIN buqfit.actors pa ON pa.id=p.actor_id JOIN buqfit.services s ON s.id=o.service_id
+       LEFT JOIN buqfit.spaces sp ON sp.id=o.space_id
       WHERE b.id=$1 AND ((o.client_actor_id=$2 AND $3::boolean) OR (p.actor_id=$2 AND $4::boolean)
-        OR EXISTS(SELECT 1 FROM bookfit.space_memberships sm WHERE sm.space_id=o.space_id AND sm.actor_id=$2 AND $5::boolean))`,
+        OR EXISTS(SELECT 1 FROM buqfit.space_memberships sm WHERE sm.space_id=o.space_id AND sm.actor_id=$2 AND $5::boolean))`,
     [
       bookingId,
       actor.actorId,
@@ -202,7 +202,7 @@ export async function getProfessionalPreferences(
     modalities: BookingMode[];
   }>(
     `SELECT pp.base_location_id,pp.max_radius_km,pp.max_travel_minutes,pp.buffer_minutes,pp.modalities
-       FROM bookfit.professional_preferences pp JOIN bookfit.professionals p ON p.id=pp.professional_id
+       FROM buqfit.professional_preferences pp JOIN buqfit.professionals p ON p.id=pp.professional_id
       WHERE p.actor_id=$1`,
     [actor.actorId],
   );
@@ -258,10 +258,10 @@ export async function updateProfessionalPreferences(
     throw new ApiError(422, "Preferencias no válidas.", "invalid_preferences");
   }
   const updated = await pool.query(
-    `UPDATE bookfit.professional_preferences pp SET base_location_id=$2,max_radius_km=$3,max_travel_minutes=$4,
+    `UPDATE buqfit.professional_preferences pp SET base_location_id=$2,max_radius_km=$3,max_travel_minutes=$4,
          buffer_minutes=$5,modalities=$6::text[]
-       FROM bookfit.professionals p WHERE pp.professional_id=p.id AND p.actor_id=$1
-       AND EXISTS(SELECT 1 FROM bookfit.locations l WHERE l.id=$2)`,
+       FROM buqfit.professionals p WHERE pp.professional_id=p.id AND p.actor_id=$1
+       AND EXISTS(SELECT 1 FROM buqfit.locations l WHERE l.id=$2)`,
     [
       actor.actorId,
       value.baseLocationId,
@@ -278,8 +278,8 @@ export async function updateProfessionalPreferences(
       "invalid_location",
     );
   await pool.query(
-    `INSERT INTO bookfit.audit_events(actor_id,action,entity_kind,entity_id,metadata)
-     SELECT $1,'professional.preferences_updated','professional',id,'{}' FROM bookfit.professionals WHERE actor_id=$1`,
+    `INSERT INTO buqfit.audit_events(actor_id,action,entity_kind,entity_id,metadata)
+     SELECT $1,'professional.preferences_updated','professional',id,'{}' FROM buqfit.professionals WHERE actor_id=$1`,
     [actor.actorId],
   );
   return getProfessionalPreferences(pool, actor);
@@ -297,8 +297,8 @@ export async function getMySpaces(
     );
   const result = await pool.query(
     `SELECT s.id,s.name,s.kind,s.location_id,l.name AS location_name,s.capacity,s.equipment,s.amenities,s.description,s.price_per_occurrence_cents
-       FROM bookfit.spaces s JOIN bookfit.space_memberships sm ON sm.space_id=s.id
-       JOIN bookfit.locations l ON l.id=s.location_id WHERE sm.actor_id=$1 ORDER BY s.name`,
+       FROM buqfit.spaces s JOIN buqfit.space_memberships sm ON sm.space_id=s.id
+       JOIN buqfit.locations l ON l.id=s.location_id WHERE sm.actor_id=$1 ORDER BY s.name`,
     [actor.actorId],
   );
   return result.rows.map((row) => ({
@@ -324,7 +324,7 @@ export async function getSpaceMetrics(
 ): Promise<Record<string, unknown>> {
   validateDateRange(from, to, 90);
   const allowed = await pool.query(
-    "SELECT 1 FROM bookfit.space_memberships WHERE space_id=$1 AND actor_id=$2",
+    "SELECT 1 FROM buqfit.space_memberships WHERE space_id=$1 AND actor_id=$2",
     [spaceId, actor.actorId],
   );
   if (!actor.roles.includes("space_manager") || !allowed.rowCount)
@@ -340,14 +340,14 @@ export async function getSpaceMetrics(
               COALESCE(sum(EXTRACT(EPOCH FROM (b.ends_at-b.starts_at))/60) FILTER (WHERE b.status='confirmed'),0) AS minutes,
               COALESCE(sum(b.y_space_cents) FILTER (WHERE b.status='confirmed'),0) AS gross,
               COALESCE(sum(b.w_space_commission_cents) FILTER (WHERE b.status='confirmed'),0) AS commission
-         FROM bookfit.booking_occurrences b JOIN bookfit.orders o ON o.id=b.order_id
+         FROM buqfit.booking_occurrences b JOIN buqfit.orders o ON o.id=b.order_id
         WHERE o.space_id=$1 AND b.service_date BETWEEN $2::date AND $3::date`,
       [spaceId, from, to],
     ),
     pool.query<{ minutes: string | number }>(
       `SELECT COALESCE(sum(EXTRACT(EPOCH FROM (oh.closes_at-oh.opens_at))/60),0) AS minutes
          FROM generate_series($2::date,$3::date,interval '1 day') AS day
-         JOIN bookfit.space_opening_hours oh ON oh.space_id=$1 AND oh.weekday=EXTRACT(DOW FROM day)::int`,
+         JOIN buqfit.space_opening_hours oh ON oh.space_id=$1 AND oh.weekday=EXTRACT(DOW FROM day)::int`,
       [spaceId, from, to],
     ),
   ]);
@@ -380,9 +380,9 @@ export async function getInformationRequests(
     `SELECT ir.id,ir.booking_occurrence_id,ir.sender_actor_id,sa.display_name AS sender_name,
             ir.recipient_actor_id,ra.display_name AS recipient_name,ir.recipient_kind,ir.body,ir.read_at,ir.created_at,
             b.service_date::text AS service_date,s.name AS service_name
-       FROM bookfit.information_requests ir JOIN bookfit.actors sa ON sa.id=ir.sender_actor_id
-       JOIN bookfit.actors ra ON ra.id=ir.recipient_actor_id JOIN bookfit.booking_occurrences b ON b.id=ir.booking_occurrence_id
-       JOIN bookfit.orders o ON o.id=b.order_id JOIN bookfit.services s ON s.id=o.service_id
+       FROM buqfit.information_requests ir JOIN buqfit.actors sa ON sa.id=ir.sender_actor_id
+       JOIN buqfit.actors ra ON ra.id=ir.recipient_actor_id JOIN buqfit.booking_occurrences b ON b.id=ir.booking_occurrence_id
+       JOIN buqfit.orders o ON o.id=b.order_id JOIN buqfit.services s ON s.id=o.service_id
       WHERE ir.sender_actor_id=$1 OR ir.recipient_actor_id=$1 ORDER BY ir.created_at DESC LIMIT 100`,
     [actor.actorId],
   );
@@ -433,8 +433,8 @@ export async function createInformationRequest(
       space_id: string | null;
     }>(
       `SELECT b.id,o.client_actor_id,o.professional_id,o.space_id
-         FROM bookfit.booking_occurrences b JOIN bookfit.orders o ON o.id=b.order_id
-         JOIN bookfit.professionals p ON p.id=o.professional_id
+         FROM buqfit.booking_occurrences b JOIN buqfit.orders o ON o.id=b.order_id
+         JOIN buqfit.professionals p ON p.id=o.professional_id
         WHERE b.id=$1 AND p.actor_id=$2 AND b.status='confirmed' AND o.status='paid' FOR UPDATE OF b,o`,
       [input.bookingOccurrenceId, actor.actorId],
     );
@@ -442,7 +442,7 @@ export async function createInformationRequest(
     if (!row)
       throw new ApiError(404, "Reserva no encontrada.", "booking_not_found");
     const sentRecently = await client.query<{ total: string }>(
-      `SELECT count(*)::text AS total FROM bookfit.information_requests
+      `SELECT count(*)::text AS total FROM buqfit.information_requests
         WHERE sender_actor_id=$1 AND created_at>now()-interval '1 minute'`,
       [actor.actorId],
     );
@@ -463,7 +463,7 @@ export async function createInformationRequest(
           "space_not_related",
         );
       const managers = await client.query<{ actor_id: string }>(
-        `SELECT sm.actor_id FROM bookfit.space_memberships sm JOIN bookfit.actor_roles ar ON ar.actor_id=sm.actor_id
+        `SELECT sm.actor_id FROM buqfit.space_memberships sm JOIN buqfit.actor_roles ar ON ar.actor_id=sm.actor_id
           WHERE sm.space_id=$1 AND ar.role='space_manager' AND sm.actor_id<>$2 ORDER BY sm.actor_id`,
         [row.space_id, actor.actorId],
       );
@@ -478,7 +478,7 @@ export async function createInformationRequest(
     const created: Array<Record<string, unknown>> = [];
     for (const recipientId of recipients) {
       const result = await client.query<{ id: string }>(
-        `INSERT INTO bookfit.information_requests(booking_occurrence_id,sender_actor_id,recipient_actor_id,recipient_kind,body)
+        `INSERT INTO buqfit.information_requests(booking_occurrence_id,sender_actor_id,recipient_actor_id,recipient_kind,body)
          VALUES($1,$2,$3,$4,$5) RETURNING id`,
         [row.id, actor.actorId, recipientId, input.recipientKind, body],
       );
@@ -492,7 +492,7 @@ export async function createInformationRequest(
       });
     }
     await client.query(
-      `INSERT INTO bookfit.audit_events(actor_id,action,entity_kind,entity_id,metadata)
+      `INSERT INTO buqfit.audit_events(actor_id,action,entity_kind,entity_id,metadata)
        VALUES($1,'information_request.sent','booking_occurrence',$2,$3::jsonb)`,
       [
         actor.actorId,
@@ -513,7 +513,7 @@ export async function markInformationRequestRead(
   requestId: string,
 ): Promise<{ id: string; readAt: string }> {
   const result = await pool.query<{ id: string; read_at: Date }>(
-    `UPDATE bookfit.information_requests SET read_at=COALESCE(read_at,now())
+    `UPDATE buqfit.information_requests SET read_at=COALESCE(read_at,now())
       WHERE id=$1 AND recipient_actor_id=$2 RETURNING id,read_at`,
     [requestId, actor.actorId],
   );

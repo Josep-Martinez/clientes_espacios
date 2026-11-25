@@ -1,6 +1,6 @@
 import type { Pool, PoolClient } from "pg";
 import { ApiError } from "./contracts.ts";
-import type { BookfitRow } from "./database-types.ts";
+import type { BuqFitRow } from "./database-types.ts";
 
 export interface LocalInterval {
   date: string;
@@ -13,7 +13,7 @@ export interface LocalInterval {
 
 export type LocationRow = Omit<
   Pick<
-    BookfitRow<"locations">,
+    BuqFitRow<"locations">,
     "id" | "slug" | "name" | "is_online" | "x_km" | "y_km"
   >,
   "x_km" | "y_km"
@@ -196,7 +196,7 @@ export async function loadLocations(
   db: Pool | PoolClient,
 ): Promise<Map<string, LocationRow>> {
   const result = await db.query<LocationRow>(
-    "SELECT id,slug,name,x_km,y_km,is_online FROM bookfit.locations",
+    "SELECT id,slug,name,x_km,y_km,is_online FROM buqfit.locations",
   );
   return new Map(result.rows.map((row) => [row.id, row]));
 }
@@ -301,9 +301,9 @@ export async function readProfessionalOccupancy(
   rangeTo.setUTCDate(rangeTo.getUTCDate() + 1);
   const allocations = await db.query<ActiveAllocation>(
     `SELECT ra.starts_at,ra.ends_at,ra.location_id,ra.resource_kind
-         FROM bookfit.resource_allocations ra
-         LEFT JOIN bookfit.orders o ON o.id=ra.order_id
-         LEFT JOIN bookfit.checkout_holds h ON h.order_id=o.id
+         FROM buqfit.resource_allocations ra
+         LEFT JOIN buqfit.orders o ON o.id=ra.order_id
+         LEFT JOIN buqfit.checkout_holds h ON h.order_id=o.id
         WHERE ra.resource_kind='professional' AND ra.resource_id=$1
           AND ra.starts_at<$3 AND ra.ends_at>$2
           AND (ra.status='confirmed' AND (ra.order_id IS NULL OR o.status='paid')
@@ -311,7 +311,7 @@ export async function readProfessionalOccupancy(
     [professionalId, rangeFrom.toISOString(), rangeTo.toISOString()],
   );
   const blocks = await db.query<{ starts_at: Date; ends_at: Date }>(
-    `SELECT starts_at,ends_at FROM bookfit.professional_blocks
+    `SELECT starts_at,ends_at FROM buqfit.professional_blocks
         WHERE professional_id=$1 AND starts_at<$3 AND ends_at>$2`,
     [professionalId, rangeFrom.toISOString(), rangeTo.toISOString()],
   );

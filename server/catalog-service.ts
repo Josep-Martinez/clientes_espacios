@@ -1,6 +1,6 @@
 import type { Pool } from "pg";
 import type {
-  BookfitRow,
+  BuqFitRow,
   ProfessionalPreferencesRow,
 } from "./database-types.ts";
 import {
@@ -14,7 +14,7 @@ import {
 import { ApiError, type BookingMode } from "./contracts.ts";
 
 type ServiceRecord = Pick<
-  BookfitRow<"services">,
+  BuqFitRow<"services">,
   | "id"
   | "professional_id"
   | "name"
@@ -36,7 +36,7 @@ type ServiceRecord = Pick<
 
 type ProfessionalRecord = Omit<
   Pick<
-    BookfitRow<"professionals">,
+    BuqFitRow<"professionals">,
     | "id"
     | "actor_id"
     | "slug"
@@ -55,7 +55,7 @@ type ProfessionalRecord = Omit<
 };
 
 type SpaceRecord = Pick<
-  BookfitRow<"spaces">,
+  BuqFitRow<"spaces">,
   | "id"
   | "name"
   | "slug"
@@ -69,11 +69,11 @@ type SpaceRecord = Pick<
 >;
 
 type LocationRecord = Pick<
-  BookfitRow<"locations">,
+  BuqFitRow<"locations">,
   "id" | "slug" | "name" | "is_online"
 >;
 type ProfessionalHoursRecord = Pick<
-  BookfitRow<"professional_hours">,
+  BuqFitRow<"professional_hours">,
   "opens_at" | "closes_at"
 >;
 type AvailabilityPreferencesRecord = Pick<
@@ -81,7 +81,7 @@ type AvailabilityPreferencesRecord = Pick<
   "base_location_id" | "max_radius_km" | "max_travel_minutes" | "buffer_minutes"
 >;
 type AvailabilityServiceRecord = Pick<
-  BookfitRow<"services">,
+  BuqFitRow<"services">,
   | "id"
   | "professional_id"
   | "name"
@@ -107,11 +107,11 @@ export async function getCatalog(
   const pattern = term ? `%${term}%` : null;
   const [locations, professionals, services, spaces] = await Promise.all([
     pool.query<LocationRecord>(
-      "SELECT id,slug,name,is_online FROM bookfit.locations ORDER BY name",
+      "SELECT id,slug,name,is_online FROM buqfit.locations ORDER BY name",
     ),
     pool.query<ProfessionalRecord>(
       `SELECT p.id,p.actor_id,a.display_name,p.slug,p.headline,p.bio,p.public_zone,p.public_location_id,p.rating,p.review_count,p.categories
-         FROM bookfit.professionals p JOIN bookfit.actors a ON a.id=p.actor_id
+         FROM buqfit.professionals p JOIN buqfit.actors a ON a.id=p.actor_id
         WHERE $1::text IS NULL OR concat_ws(' ',a.display_name,p.headline,p.bio,p.public_zone,array_to_string(p.categories,' ')) ILIKE $1
         ORDER BY p.rating DESC,a.display_name LIMIT 100`,
       [pattern],
@@ -121,15 +121,15 @@ export async function getCatalog(
               p.public_zone AS professional_zone,p.rating AS professional_rating,
               s.name,s.category,s.description,s.service_format,s.duration_minutes,s.price_cents,
               s.modalities,s.required_equipment,s.group_capacity,s.class_activity
-         FROM bookfit.services s JOIN bookfit.professionals p ON p.id=s.professional_id
-         JOIN bookfit.actors a ON a.id=p.actor_id
+         FROM buqfit.services s JOIN buqfit.professionals p ON p.id=s.professional_id
+         JOIN buqfit.actors a ON a.id=p.actor_id
         WHERE $1::text IS NULL OR concat_ws(' ',s.name,s.category,s.description,a.display_name) ILIKE $1
         ORDER BY s.name LIMIT 100`,
       [pattern],
     ),
     pool.query<SpaceRecord>(
       `SELECT s.id,s.name,s.slug,s.kind,s.location_id,s.capacity,s.equipment,s.amenities,s.description,s.price_per_occurrence_cents
-         FROM bookfit.spaces s JOIN bookfit.locations l ON l.id=s.location_id
+         FROM buqfit.spaces s JOIN buqfit.locations l ON l.id=s.location_id
         WHERE $1::text IS NULL OR concat_ws(' ',s.name,s.kind,s.description,l.name,array_to_string(s.equipment,' ')) ILIKE $1
         ORDER BY s.kind,s.name LIMIT 100`,
       [pattern],
@@ -243,11 +243,11 @@ export async function getClasses(
             s.price_cents AS service_price_cents,sp.price_per_occurrence_cents AS space_price_cents,
             COALESCE(sum(sa.seats) FILTER (WHERE sa.status='confirmed' AND o.status='paid'
               OR sa.status='held' AND o.status='pending' AND h.expires_at>now()),0) AS used_seats
-       FROM bookfit.class_sessions c JOIN bookfit.services s ON s.id=c.service_id
-       JOIN bookfit.professionals p ON p.id=c.professional_id JOIN bookfit.actors a ON a.id=p.actor_id
-       JOIN bookfit.spaces sp ON sp.id=c.space_id JOIN bookfit.locations l ON l.id=sp.location_id
-       LEFT JOIN bookfit.seat_allocations sa ON sa.class_session_id=c.id
-       LEFT JOIN bookfit.orders o ON o.id=sa.order_id LEFT JOIN bookfit.checkout_holds h ON h.order_id=o.id
+       FROM buqfit.class_sessions c JOIN buqfit.services s ON s.id=c.service_id
+       JOIN buqfit.professionals p ON p.id=c.professional_id JOIN buqfit.actors a ON a.id=p.actor_id
+       JOIN buqfit.spaces sp ON sp.id=c.space_id JOIN buqfit.locations l ON l.id=sp.location_id
+       LEFT JOIN buqfit.seat_allocations sa ON sa.class_session_id=c.id
+       LEFT JOIN buqfit.orders o ON o.id=sa.order_id LEFT JOIN buqfit.checkout_holds h ON h.order_id=o.id
       WHERE c.service_date BETWEEN $1::date AND $2::date
       GROUP BY c.id,s.name,s.category,a.display_name,sp.name,l.name,s.price_cents,sp.price_per_occurrence_cents
       ORDER BY c.service_date,c.starts_at LIMIT 100`,
@@ -306,8 +306,8 @@ export async function getAvailability(
   if (!Number.isInteger(input.seats) || input.seats < 1 || input.seats > 12)
     throw new ApiError(422, "Número de plazas no válido.", "invalid_seats");
   const serviceResult = await pool.query<AvailabilityServiceRecord>(
-    `SELECT s.*,a.display_name AS professional_name FROM bookfit.services s
-       JOIN bookfit.professionals p ON p.id=s.professional_id JOIN bookfit.actors a ON a.id=p.actor_id WHERE s.id=$1`,
+    `SELECT s.*,a.display_name AS professional_name FROM buqfit.services s
+       JOIN buqfit.professionals p ON p.id=s.professional_id JOIN buqfit.actors a ON a.id=p.actor_id WHERE s.id=$1`,
     [input.serviceId],
   );
   const service = serviceResult.rows[0];
@@ -329,12 +329,12 @@ export async function getAvailability(
     );
   const weekday = new Date(`${input.date}T12:00:00Z`).getUTCDay();
   const hours = await pool.query<ProfessionalHoursRecord>(
-    "SELECT opens_at::text,closes_at::text FROM bookfit.professional_hours WHERE professional_id=$1 AND weekday=$2",
+    "SELECT opens_at::text,closes_at::text FROM buqfit.professional_hours WHERE professional_id=$1 AND weekday=$2",
     [service.professional_id, weekday],
   );
   if (!hours.rowCount) return { date: input.date, slots: [] };
   const prefsResult = await pool.query<AvailabilityPreferencesRecord>(
-    "SELECT base_location_id,max_radius_km,max_travel_minutes,buffer_minutes FROM bookfit.professional_preferences WHERE professional_id=$1",
+    "SELECT base_location_id,max_radius_km,max_travel_minutes,buffer_minutes FROM buqfit.professional_preferences WHERE professional_id=$1",
     [service.professional_id],
   );
   const preferences = prefsResult.rows[0];
@@ -360,8 +360,8 @@ export async function getAvailability(
         >(
           `SELECT sp.id,sp.name,sp.slug,sp.kind,sp.location_id,sp.capacity,sp.equipment,sp.amenities,sp.description,
               sp.price_per_occurrence_cents,l.name AS location_name,oh.opens_at::text,oh.closes_at::text
-         FROM bookfit.spaces sp JOIN bookfit.locations l ON l.id=sp.location_id
-         LEFT JOIN bookfit.space_opening_hours oh ON oh.space_id=sp.id AND oh.weekday=$3
+         FROM buqfit.spaces sp JOIN buqfit.locations l ON l.id=sp.location_id
+         LEFT JOIN buqfit.space_opening_hours oh ON oh.space_id=sp.id AND oh.weekday=$3
         WHERE sp.kind=$1 AND sp.capacity >= $2 AND sp.equipment @> $4::text[] AND oh.space_id IS NOT NULL
         ORDER BY sp.name`,
           [input.mode, input.seats, weekday, service.required_equipment],
@@ -420,8 +420,8 @@ export async function getAvailability(
         )
           continue;
         const spaceConflict = await pool.query(
-          `SELECT 1 FROM bookfit.resource_allocations ra LEFT JOIN bookfit.orders o ON o.id=ra.order_id
-             LEFT JOIN bookfit.checkout_holds h ON h.order_id=o.id
+          `SELECT 1 FROM buqfit.resource_allocations ra LEFT JOIN buqfit.orders o ON o.id=ra.order_id
+             LEFT JOIN buqfit.checkout_holds h ON h.order_id=o.id
             WHERE ra.resource_kind='space' AND ra.resource_id=$1 AND ra.starts_at<$3 AND ra.ends_at>$2
               AND (ra.status='confirmed' AND (ra.order_id IS NULL OR o.status='paid')
                 OR ra.status='held' AND o.status='pending' AND h.expires_at>now()) LIMIT 1`,
@@ -433,7 +433,7 @@ export async function getAvailability(
         );
         if (spaceConflict.rowCount) continue;
         const blocked = await pool.query(
-          "SELECT 1 FROM bookfit.space_blocks WHERE space_id=$1 AND starts_at<$3 AND ends_at>$2 LIMIT 1",
+          "SELECT 1 FROM buqfit.space_blocks WHERE space_id=$1 AND starts_at<$3 AND ends_at>$2 LIMIT 1",
           [
             space.id,
             interval.startsAt.toISOString(),

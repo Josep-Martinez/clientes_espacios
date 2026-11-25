@@ -6,10 +6,10 @@ import {
   type FormEvent,
 } from "react";
 import {
-  bookfitApi,
+  buqfitApi,
   type AgendaEvent,
   type AvailabilitySlot,
-  type BookFitActor,
+  type BuqFitActor,
   type Catalog,
   type Checkout,
   type CheckoutPaymentResult,
@@ -20,7 +20,7 @@ import {
   type Service,
   type Space,
   type SpaceMetrics,
-} from "./api/bookfit.ts";
+} from "./api/buqfit.ts";
 
 type Page = "explore" | "agenda" | "professional" | "spaces" | "requests";
 type Feedback = { kind: "success" | "error" | "info"; message: string } | null;
@@ -33,8 +33,8 @@ const BOOKING_MODES = [
 ] as const;
 
 function hasRole(
-  actor: BookFitActor | null,
-  role: BookFitActor["roles"][number],
+  actor: BuqFitActor | null,
+  role: BuqFitActor["roles"][number],
 ): boolean {
   return Boolean(actor?.roles.includes(role));
 }
@@ -89,14 +89,14 @@ function money(cents: number): string {
 }
 
 function initials(name: string | null | undefined): string {
-  const safeName = typeof name === "string" && name.trim() ? name : "BookFit";
+  const safeName = typeof name === "string" && name.trim() ? name : "BuqFit";
   return (
     safeName
       .split(/\s+/)
       .filter(Boolean)
       .slice(0, 2)
       .map((part) => part[0]?.toUpperCase())
-      .join("") || "BF"
+      .join("") || "BQ"
   );
 }
 
@@ -104,8 +104,8 @@ function startOfToday(): string {
   return dateKey(new Date());
 }
 
-function getRoleLabel(roles: BookFitActor["roles"]): string {
-  const labels: Record<BookFitActor["roles"][number], string> = {
+function getRoleLabel(roles: BuqFitActor["roles"]): string {
+  const labels: Record<BuqFitActor["roles"][number], string> = {
     client: "Cliente",
     professional: "Profesional",
     space_manager: "Gestor de espacio",
@@ -145,25 +145,25 @@ function selectedData<T>(
   );
 }
 
-function actorFromPayload(payload: unknown): BookFitActor | null {
+function actorFromPayload(payload: unknown): BuqFitActor | null {
   if (!payload || typeof payload !== "object") return null;
   const record = payload as Record<string, unknown>;
   const candidate = (record.actor ??
     record.me ??
-    payload) as Partial<BookFitActor>;
+    payload) as Partial<BuqFitActor>;
   if (typeof candidate.actorId !== "string" || !Array.isArray(candidate.roles))
     return null;
   return {
     actorId: candidate.actorId,
     name: typeof candidate.name === "string" ? candidate.name : "Cuenta demo",
-    roles: candidate.roles as BookFitActor["roles"],
+    roles: candidate.roles as BuqFitActor["roles"],
     professionalId: candidate.professionalId ?? null,
     spaceIds: Array.isArray(candidate.spaceIds) ? candidate.spaceIds : [],
   };
 }
 
 export default function App() {
-  const [actor, setActor] = useState<BookFitActor | null>(null);
+  const [actor, setActor] = useState<BuqFitActor | null>(null);
   const [profiles, setProfiles] = useState<DemoProfile[]>([]);
   const [catalog, setCatalog] = useState<Catalog>({
     locations: [],
@@ -181,7 +181,7 @@ export default function App() {
   const [checkout, setCheckout] = useState<Checkout | null>(null);
 
   const refreshAccount = useCallback(
-    async (currentActor: BookFitActor | null) => {
+    async (currentActor: BuqFitActor | null) => {
       if (!currentActor) {
         setAgenda([]);
         setRequests([]);
@@ -190,10 +190,10 @@ export default function App() {
       const from = startOfToday();
       const to = dateAfter(90);
       const [agendaResult, requestResult] = await Promise.allSettled([
-        bookfitApi.get<AgendaEvent[] | { items?: AgendaEvent[] }>(
+        buqfitApi.get<AgendaEvent[] | { items?: AgendaEvent[] }>(
           `/agenda?from=${from}&to=${to}`,
         ),
-        bookfitApi.get<
+        buqfitApi.get<
           InformationRequest[] | { requests?: InformationRequest[] }
         >(`/information-requests`),
       ]);
@@ -209,7 +209,7 @@ export default function App() {
     const params = new URLSearchParams();
     if (query.trim()) params.set("query", query.trim());
     const suffix = params.size ? `?${params.toString()}` : "";
-    const result = await bookfitApi.get<Catalog>(`/catalog${suffix}`);
+    const result = await buqfitApi.get<Catalog>(`/catalog${suffix}`);
     setCatalog({
       locations: result.locations ?? [],
       professionals: result.professionals ?? [],
@@ -225,9 +225,9 @@ export default function App() {
       try {
         const [meResult, catalogResult, profilesResult] =
           await Promise.allSettled([
-            bookfitApi.get<unknown>("/me"),
-            bookfitApi.get<Catalog>("/catalog"),
-            bookfitApi.get<DemoProfile[] | { profiles?: DemoProfile[] }>(
+            buqfitApi.get<unknown>("/me"),
+            buqfitApi.get<Catalog>("/catalog"),
+            buqfitApi.get<DemoProfile[] | { profiles?: DemoProfile[] }>(
               "/dev/profiles",
             ),
           ]);
@@ -263,7 +263,7 @@ export default function App() {
             message:
               error instanceof Error
                 ? error.message
-                : "No se pudo iniciar BookFit.",
+                : "No se pudo iniciar BuqFit.",
           });
       } finally {
         if (mounted) setLoading(false);
@@ -279,7 +279,7 @@ export default function App() {
     setBusy(true);
     setFeedback(null);
     try {
-      const result = await bookfitApi.post<unknown>("/dev/session", {
+      const result = await buqfitApi.post<unknown>("/dev/session", {
         profileId,
       });
       const nextActor = actorFromPayload(result);
@@ -307,7 +307,7 @@ export default function App() {
   async function signOut(): Promise<void> {
     setBusy(true);
     try {
-      await bookfitApi.delete("/dev/session");
+      await buqfitApi.delete("/dev/session");
       setActor(null);
       setAgenda([]);
       setRequests([]);
@@ -337,23 +337,23 @@ export default function App() {
   ).length;
 
   return (
-    <div className="bf-app">
-      <a className="bf-skip" href="#bf-main">
+    <div className="bqf-app">
+      <a className="bqf-skip" href="#bqf-main">
         Saltar al contenido
       </a>
-      <header className="bf-header">
+      <header className="bqf-header">
         <button
-          aria-label="BookFit, explorar"
-          className="bf-brand"
+          aria-label="BuqFit, explorar"
+          className="bqf-brand"
           onClick={() => setPage("explore")}
           type="button"
         >
-          <span className="bf-brand-mark" aria-hidden="true">
+          <span className="bqf-brand-mark" aria-hidden="true">
             B
           </span>
-          <span>BookFit</span>
+          <span>BuqFit</span>
         </button>
-        <nav aria-label="Navegación principal" className="bf-nav">
+        <nav aria-label="Navegación principal" className="bqf-nav">
           <button
             aria-current={page === "explore" ? "page" : undefined}
             onClick={() => setPage("explore")}
@@ -396,7 +396,7 @@ export default function App() {
             >
               Solicitudes
               {unreadCount > 0 && (
-                <span className="bf-count">{unreadCount}</span>
+                <span className="bqf-count">{unreadCount}</span>
               )}
             </button>
           )}
@@ -407,25 +407,25 @@ export default function App() {
               ? `Perfil local de ${actor.name}`
               : "Perfil local: modo público"
           }
-          className="bf-profile"
+          className="bqf-profile"
           onClick={() => setSessionOpen(true)}
           type="button"
         >
-          <span className="bf-avatar">
+          <span className="bqf-avatar">
             {actor ? initials(actor.name) : "·"}
           </span>
-          <span className="bf-profile-copy">
+          <span className="bqf-profile-copy">
             <small>{actor ? getRoleLabel(actor.roles) : "Modo público"}</small>
             <strong>{actor?.name ?? "Elegir perfil"}</strong>
           </span>
-          <span aria-hidden="true" className="bf-chevron">
+          <span aria-hidden="true" className="bqf-chevron">
             ⌄
           </span>
         </button>
       </header>
 
-      <main className="bf-main" id="bf-main">
-        <div className="bf-demo-banner">
+      <main className="bqf-main" id="bqf-main">
+        <div className="bqf-demo-banner">
           <span aria-hidden="true">●</span>
           <div>
             <strong>Entorno local de prueba</strong>
@@ -433,7 +433,7 @@ export default function App() {
           </div>
         </div>
         {feedback && (
-          <div className={`bf-alert bf-alert-${feedback.kind}`} role="status">
+          <div className={`bqf-alert bqf-alert-${feedback.kind}`} role="status">
             <span>{feedback.message}</span>
             <button
               aria-label="Cerrar aviso"
@@ -445,8 +445,8 @@ export default function App() {
           </div>
         )}
         {loading ? (
-          <section className="bf-loading" aria-live="polite">
-            Cargando BookFit…
+          <section className="bqf-loading" aria-live="polite">
+            Cargando BuqFit…
           </section>
         ) : (
           <>
@@ -496,8 +496,8 @@ export default function App() {
           </>
         )}
       </main>
-      <footer className="bf-footer">
-        <strong>BookFit</strong>
+      <footer className="bqf-footer">
+        <strong>BuqFit</strong>
         <span>Un espacio para moverte mejor.</span>
         <span>Primera versión local · datos sintéticos</span>
       </footer>
@@ -520,10 +520,10 @@ export default function App() {
           onPay={async (outcome) => {
             setBusy(true);
             try {
-              const result = await bookfitApi.post<CheckoutPaymentResult>(
+              const result = await buqfitApi.post<CheckoutPaymentResult>(
                 `/dev/checkouts/${checkout.checkoutId}/pay`,
                 { outcome },
-                bookfitApi.idempotencyKey(),
+                buqfitApi.idempotencyKey(),
               );
               setCheckout((current) =>
                 current
@@ -579,7 +579,7 @@ function ProfileDialog({
   onSelect,
   onSignOut,
 }: {
-  actor: BookFitActor | null;
+  actor: BuqFitActor | null;
   profiles: DemoProfile[];
   busy: boolean;
   onClose: () => void;
@@ -588,27 +588,27 @@ function ProfileDialog({
 }) {
   return (
     <div
-      className="bf-overlay"
+      className="bqf-overlay"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}
     >
       <section
-        aria-labelledby="bf-profile-title"
+        aria-labelledby="bqf-profile-title"
         aria-modal="true"
-        className="bf-dialog"
+        className="bqf-dialog"
         role="dialog"
       >
-        <div className="bf-dialog-head">
+        <div className="bqf-dialog-head">
           <div>
-            <span className="bf-kicker">ACCESO LOCAL</span>
-            <h2 id="bf-profile-title">
+            <span className="bqf-kicker">ACCESO LOCAL</span>
+            <h2 id="bqf-profile-title">
               {actor ? "Cambiar de perfil" : "Elige un perfil de prueba"}
             </h2>
           </div>
           <button
             aria-label="Cerrar"
-            className="bf-close"
+            className="bqf-close"
             onClick={onClose}
             type="button"
           >
@@ -619,16 +619,16 @@ function ProfileDialog({
           La sesión se guarda en el servidor mediante una cookie segura. No
           necesitas crear una cuenta.
         </p>
-        <div className="bf-profile-list">
+        <div className="bqf-profile-list">
           {profiles.map((profile) => (
             <button
-              className="bf-profile-option"
+              className="bqf-profile-option"
               disabled={busy}
               key={profile.id}
               onClick={() => onSelect(profile.id)}
               type="button"
             >
-              <span className="bf-avatar">{initials(profile.name)}</span>
+              <span className="bqf-avatar">{initials(profile.name)}</span>
               <span>
                 <strong>{profile.name}</strong>
                 <small>{getRoleLabel(profile.roles)}</small>
@@ -637,7 +637,7 @@ function ProfileDialog({
             </button>
           ))}
           {!profiles.length && (
-            <p className="bf-empty">
+            <p className="bqf-empty">
               No se han cargado perfiles locales. Comprueba que PostgreSQL tiene
               las semillas aplicadas.
             </p>
@@ -645,7 +645,7 @@ function ProfileDialog({
         </div>
         {onSignOut && (
           <button
-            className="bf-link-button"
+            className="bqf-link-button"
             disabled={busy}
             onClick={onSignOut}
             type="button"
@@ -667,7 +667,7 @@ function ExplorePage({
   onError,
   onSuccess,
 }: {
-  actor: BookFitActor | null;
+  actor: BuqFitActor | null;
   catalog: Catalog;
   onLogin: () => void;
   onRefresh: (query?: string) => Promise<void>;
@@ -743,7 +743,7 @@ function ExplorePage({
         from: dateRange.from,
         to: dateRange.to,
       });
-      const result = await bookfitApi.get<
+      const result = await buqfitApi.get<
         ClassSession[] | { sessions?: ClassSession[] }
       >(`/classes?${params}`);
       setClasses(
@@ -773,7 +773,7 @@ function ExplorePage({
         areaLocationId,
         seats: String(seats),
       });
-      const result = await bookfitApi.get<
+      const result = await buqfitApi.get<
         AvailabilitySlot[] | { slots?: AvailabilitySlot[] }
       >(`/availability?${params}`);
       const options = selectedData(result);
@@ -843,7 +843,7 @@ function ExplorePage({
           ...(selectedSpaceId ? { spaceId: selectedSpaceId } : {}),
         });
       }
-      const result = await bookfitApi.post<Checkout>(
+      const result = await buqfitApi.post<Checkout>(
         "/checkouts",
         {
           serviceId: service.id,
@@ -851,7 +851,7 @@ function ExplorePage({
           seats,
           slots: selections,
         },
-        bookfitApi.idempotencyKey(),
+        buqfitApi.idempotencyKey(),
       );
       onCheckout(result);
       onSuccess(
@@ -878,7 +878,7 @@ function ExplorePage({
       areaLocationId,
       seats: String(seats),
     });
-    const result = await bookfitApi.get<
+    const result = await buqfitApi.get<
       AvailabilitySlot[] | { slots?: AvailabilitySlot[] }
     >(`/availability?${params}`);
     return (
@@ -899,7 +899,7 @@ function ExplorePage({
     );
     setLocalBusy(true);
     try {
-      const result = await bookfitApi.post<Checkout>(
+      const result = await buqfitApi.post<Checkout>(
         "/checkouts",
         {
           serviceId: service.id,
@@ -912,7 +912,7 @@ function ExplorePage({
             classSessionId: session.id,
           })),
         },
-        bookfitApi.idempotencyKey(),
+        buqfitApi.idempotencyKey(),
       );
       onCheckout(result);
       onSuccess("Plazas retenidas durante 10 minutos.");
@@ -933,7 +933,7 @@ function ExplorePage({
       return;
     }
     try {
-      await bookfitApi.post(`/classes/${session.id}/waitlist`, { seats });
+      await buqfitApi.post(`/classes/${session.id}/waitlist`, { seats });
       onSuccess(
         "Te has apuntado a la lista de espera. No se ha reservado ni cobrado ninguna plaza.",
       );
@@ -948,10 +948,10 @@ function ExplorePage({
   }
 
   return (
-    <div className="bf-explore">
-      <section className="bf-hero">
-        <div className="bf-hero-copy">
-          <span className="bf-kicker">BIENESTAR, A TU RITMO</span>
+    <div className="bqf-explore">
+      <section className="bqf-hero">
+        <div className="bqf-hero-copy">
+          <span className="bqf-kicker">BIENESTAR, A TU RITMO</span>
           <h1>
             Tu próxima sesión empieza <em>por encontrar el lugar.</em>
           </h1>
@@ -959,15 +959,15 @@ function ExplorePage({
             Descubre profesionales, horarios y espacios. El precio y la
             disponibilidad se confirman en el servidor antes de reservar.
           </p>
-          <div className="bf-hero-tags">
+          <div className="bqf-hero-tags">
             <span>◷ Horarios disponibles</span>
             <span>⌖ Valencia y en línea</span>
             <span>◇ Reserva en un solo paso</span>
           </div>
         </div>
-        <div className="bf-hero-card">
-          <span className="bf-card-kicker">BOOKFIT CONECTA</span>
-          <div className="bf-orbit">
+        <div className="bqf-hero-card">
+          <span className="bqf-card-kicker">BUQFIT CONECTA</span>
+          <div className="bqf-orbit">
             <span>Cliente</span>
             <i />
             <span>Profesional</span>
@@ -975,7 +975,7 @@ function ExplorePage({
             <span>Espacio</span>
           </div>
           <p>Una reserva, coordinada de principio a fin.</p>
-          <div className="bf-hero-stat">
+          <div className="bqf-hero-stat">
             <strong>
               {catalog.professionals.length.toString().padStart(2, "0")}
             </strong>
@@ -986,62 +986,62 @@ function ExplorePage({
 
       <section
         aria-label="Buscar profesionales y sesiones"
-        className="bf-search-box"
+        className="bqf-search-box"
       >
         <form
-          className="bf-search-form"
+          className="bqf-search-form"
           onSubmit={(event) => void searchCatalog(event)}
         >
-          <label className="bf-search-label" htmlFor="bf-search">
+          <label className="bqf-search-label" htmlFor="bqf-search">
             ¿Qué te gustaría hacer?
           </label>
-          <div className="bf-search-row">
+          <div className="bqf-search-row">
             <span aria-hidden="true">⌕</span>
             <input
-              id="bf-search"
+              id="bqf-search"
               onChange={(event) => setQuery(event.currentTarget.value)}
               placeholder="Pilates, fisioterapia, entrenamiento…"
               value={query}
             />
             <button
-              className="bf-button bf-button-dark"
+              className="bqf-button bqf-button-dark"
               disabled={searching}
               type="submit"
             >
               {searching ? "Buscando…" : "Buscar"}
             </button>
           </div>
-          <div className="bf-search-caption">
+          <div className="bqf-search-caption">
             <span>Explora sin iniciar sesión</span>
             <span>Reserva cuando encuentres tu opción</span>
           </div>
         </form>
-        <div className="bf-search-side">
-          <span className="bf-kicker">A TU MANERA</span>
+        <div className="bqf-search-side">
+          <span className="bqf-kicker">A TU MANERA</span>
           <strong>Sesiones presenciales o en línea.</strong>
           <span>Elige profesional, fecha y modalidad.</span>
         </div>
       </section>
 
       <section
-        className="bf-booking-section"
-        aria-labelledby="bf-booking-heading"
+        className="bqf-booking-section"
+        aria-labelledby="bqf-booking-heading"
       >
-        <div className="bf-section-heading">
+        <div className="bqf-section-heading">
           <div>
-            <span className="bf-kicker">RESERVA</span>
-            <h2 id="bf-booking-heading">Encuentra una sesión</h2>
+            <span className="bqf-kicker">RESERVA</span>
+            <h2 id="bqf-booking-heading">Encuentra una sesión</h2>
           </div>
-          <span className="bf-step-pill">
+          <span className="bqf-step-pill">
             01 / 03 · Elige servicio y horario
           </span>
         </div>
-        <div className="bf-booking-grid">
-          <div className="bf-booking-form">
-            <div className="bf-field">
-              <label htmlFor="bf-service">Servicio</label>
+        <div className="bqf-booking-grid">
+          <div className="bqf-booking-form">
+            <div className="bqf-field">
+              <label htmlFor="bqf-service">Servicio</label>
               <select
-                id="bf-service"
+                id="bqf-service"
                 onChange={(event) => {
                   setServiceId(event.currentTarget.value);
                   setSlots([]);
@@ -1057,8 +1057,8 @@ function ExplorePage({
               </select>
             </div>
             {service && (
-              <div className="bf-selected-service">
-                <span className="bf-avatar bf-avatar-lime">
+              <div className="bqf-selected-service">
+                <span className="bqf-avatar bqf-avatar-lime">
                   {initials(service.professionalName)}
                 </span>
                 <div>
@@ -1067,16 +1067,16 @@ function ExplorePage({
                     {service.professionalHeadline} · {service.professionalZone}
                   </span>
                 </div>
-                <span className="bf-rating">
+                <span className="bqf-rating">
                   ★ {service.professionalRating.toFixed(1)}
                 </span>
               </div>
             )}
-            <div className="bf-form-row">
-              <div className="bf-field">
-                <label htmlFor="bf-mode">Modalidad</label>
+            <div className="bqf-form-row">
+              <div className="bqf-field">
+                <label htmlFor="bqf-mode">Modalidad</label>
                 <select
-                  id="bf-mode"
+                  id="bqf-mode"
                   onChange={(event) => {
                     setMode(event.currentTarget.value as typeof mode);
                     setSlots([]);
@@ -1092,10 +1092,10 @@ function ExplorePage({
                   ))}
                 </select>
               </div>
-              <div className="bf-field">
-                <label htmlFor="bf-date">Fecha de inicio</label>
+              <div className="bqf-field">
+                <label htmlFor="bqf-date">Fecha de inicio</label>
                 <input
-                  id="bf-date"
+                  id="bqf-date"
                   min={dateAfter(1)}
                   onChange={(event) => {
                     setDate(event.currentTarget.value);
@@ -1106,13 +1106,13 @@ function ExplorePage({
                 />
               </div>
             </div>
-            <div className="bf-form-row">
-              <div className="bf-field">
-                <label htmlFor="bf-seats">
+            <div className="bqf-form-row">
+              <div className="bqf-field">
+                <label htmlFor="bqf-seats">
                   {service?.format === "group" ? "Plazas" : "Personas"}
                 </label>
                 <input
-                  id="bf-seats"
+                  id="bqf-seats"
                   min="1"
                   max={service?.groupCapacity ?? 1}
                   onChange={(event) => {
@@ -1123,10 +1123,10 @@ function ExplorePage({
                   value={seats}
                 />
               </div>
-              <div className="bf-field">
-                <label htmlFor="bf-area">Zona de referencia</label>
+              <div className="bqf-field">
+                <label htmlFor="bqf-area">Zona de referencia</label>
                 <select
-                  id="bf-area"
+                  id="bqf-area"
                   onChange={(event) => {
                     setAreaLocationId(event.currentTarget.value);
                     setSlots([]);
@@ -1144,10 +1144,10 @@ function ExplorePage({
               </div>
             </div>
             {service?.format === "individual" && (
-              <div className="bf-field bf-repeat-field">
-                <label htmlFor="bf-repeat">Repetir semanalmente</label>
+              <div className="bqf-field bqf-repeat-field">
+                <label htmlFor="bqf-repeat">Repetir semanalmente</label>
                 <select
-                  id="bf-repeat"
+                  id="bqf-repeat"
                   onChange={(event) =>
                     setRepeatCount(Number(event.currentTarget.value))
                   }
@@ -1164,7 +1164,7 @@ function ExplorePage({
               </div>
             )}
             <button
-              className="bf-button bf-button-primary bf-full"
+              className="bqf-button bqf-button-primary bqf-full"
               disabled={!service || availabilityLoading || localBusy}
               onClick={() => void loadAvailability()}
               type="button"
@@ -1173,35 +1173,35 @@ function ExplorePage({
                 ? "Comprobando agenda…"
                 : "Ver horarios disponibles"}
             </button>
-            <p className="bf-private-note">
+            <p className="bqf-private-note">
               <strong>Privacidad:</strong> el calendario del profesional
               permanece privado; aquí solo aparecen las opciones viables.
             </p>
           </div>
-          <div className="bf-times-panel">
+          <div className="bqf-times-panel">
             {service?.format === "group" ? (
               <>
-                <div className="bf-times-heading">
-                  <span className="bf-kicker">CLASES PRÓXIMAS</span>
+                <div className="bqf-times-heading">
+                  <span className="bqf-kicker">CLASES PRÓXIMAS</span>
                   <h3>Plazas y fechas</h3>
                   <p>El aforo se comprueba en cada reserva.</p>
                 </div>
                 {!classes.length ? (
-                  <div className="bf-empty">
+                  <div className="bqf-empty">
                     No hay clases publicadas para este servicio en las próximas
                     semanas.
                   </div>
                 ) : (
-                  <div className="bf-class-list">
+                  <div className="bqf-class-list">
                     {classes.map((session) => {
                       const full = session.availableSeats <= 0;
                       const selected = pickedClassIds.includes(session.id);
                       return (
                         <article
-                          className={`bf-class-card${selected ? " is-selected" : ""}`}
+                          className={`bqf-class-card${selected ? " is-selected" : ""}`}
                           key={session.id}
                         >
-                          <div className="bf-class-date">
+                          <div className="bqf-class-date">
                             <strong>
                               {new Date(`${session.date}T12:00:00`).getDate()}
                             </strong>
@@ -1211,7 +1211,7 @@ function ExplorePage({
                               }).format(new Date(`${session.date}T12:00:00`))}
                             </span>
                           </div>
-                          <div className="bf-class-details">
+                          <div className="bqf-class-details">
                             <strong>
                               {formatDate(session.date)} ·{" "}
                               {formatTime(session.startMinute)}
@@ -1228,14 +1228,14 @@ function ExplorePage({
                           </div>
                           {full ? (
                             <button
-                              className="bf-button bf-button-outline bf-small"
+                              className="bqf-button bqf-button-outline bqf-small"
                               onClick={() => void joinWaitlist(session)}
                               type="button"
                             >
                               Lista de espera
                             </button>
                           ) : (
-                            <label className="bf-check-class">
+                            <label className="bqf-check-class">
                               <input
                                 checked={selected}
                                 onChange={() =>
@@ -1259,7 +1259,7 @@ function ExplorePage({
                 )}
                 {pickedClassIds.length > 0 && (
                   <button
-                    className="bf-button bf-button-primary bf-full"
+                    className="bqf-button bqf-button-primary bqf-full"
                     disabled={localBusy}
                     onClick={() => void bookClasses()}
                     type="button"
@@ -1271,8 +1271,8 @@ function ExplorePage({
               </>
             ) : (
               <>
-                <div className="bf-times-heading">
-                  <span className="bf-kicker">HORARIOS DISPONIBLES</span>
+                <div className="bqf-times-heading">
+                  <span className="bqf-kicker">HORARIOS DISPONIBLES</span>
                   <h3>{formatDate(date)}</h3>
                   <p>
                     Bloques de {service?.durationMinutes ?? 0} min · horario
@@ -1280,8 +1280,8 @@ function ExplorePage({
                   </p>
                 </div>
                 {!slots.length ? (
-                  <div className="bf-empty">
-                    <span className="bf-empty-icon">◷</span>
+                  <div className="bqf-empty">
+                    <span className="bqf-empty-icon">◷</span>
                     <strong>Elige un día para ver opciones.</strong>
                     <span>
                       Solo mostramos horarios que cumplen agenda, desplazamiento
@@ -1289,14 +1289,14 @@ function ExplorePage({
                     </span>
                   </div>
                 ) : (
-                  <div className="bf-slot-list">
+                  <div className="bqf-slot-list">
                     {slots.map((slot) => (
                       <div
-                        className="bf-slot-row"
+                        className="bqf-slot-row"
                         key={`${slot.date}-${slot.startMinute}`}
                       >
                         <button
-                          className="bf-slot-button"
+                          className="bqf-slot-button"
                           onClick={() => void createIndividualCheckout(slot)}
                           disabled={localBusy}
                           type="button"
@@ -1307,12 +1307,12 @@ function ExplorePage({
                         </button>
                         {(mode === "room" || mode === "gym") &&
                           slot.spaces.length > 0 && (
-                            <div className="bf-slot-space">
-                              <label htmlFor={`bf-space-${slot.startMinute}`}>
+                            <div className="bqf-slot-space">
+                              <label htmlFor={`bqf-space-${slot.startMinute}`}>
                                 en
                               </label>
                               <select
-                                id={`bf-space-${slot.startMinute}`}
+                                id={`bqf-space-${slot.startMinute}`}
                                 onChange={(event) =>
                                   setSpaceChoiceByMinute((current) => ({
                                     ...current,
@@ -1340,10 +1340,10 @@ function ExplorePage({
                 )}
               </>
             )}
-            <div className="bf-pricing-note">
+            <div className="bqf-pricing-note">
               <span>€</span>
               <p>
-                Precio final calculado por BookFit al crear el checkout. Incluye
+                Precio final calculado por BuqFit al crear el checkout. Incluye
                 el desglose antes de simular el pago.
               </p>
             </div>
@@ -1351,37 +1351,37 @@ function ExplorePage({
         </div>
       </section>
 
-      <section aria-labelledby="bf-discovery-title" className="bf-discovery">
-        <div className="bf-section-heading">
+      <section aria-labelledby="bqf-discovery-title" className="bqf-discovery">
+        <div className="bqf-section-heading">
           <div>
-            <span className="bf-kicker">PARA DESCUBRIR</span>
-            <h2 id="bf-discovery-title">Servicios destacados</h2>
+            <span className="bqf-kicker">PARA DESCUBRIR</span>
+            <h2 id="bqf-discovery-title">Servicios destacados</h2>
           </div>
-          <span className="bf-muted">{catalog.services.length} servicios</span>
+          <span className="bqf-muted">{catalog.services.length} servicios</span>
         </div>
-        <div className="bf-service-grid">
+        <div className="bqf-service-grid">
           {catalog.services.map((item, index) => (
             <article
-              className={`bf-service-card bf-service-card-${(index % 4) + 1}`}
+              className={`bqf-service-card bqf-service-card-${(index % 4) + 1}`}
               key={item.id}
             >
-              <div className="bf-service-art">
+              <div className="bqf-service-art">
                 <span>{String(index + 1).padStart(2, "0")}</span>
                 <i aria-hidden="true" />
               </div>
-              <div className="bf-service-body">
-                <div className="bf-service-meta">
+              <div className="bqf-service-body">
+                <div className="bqf-service-meta">
                   <span>{item.category}</span>
                   <span>★ {item.professionalRating.toFixed(1)}</span>
                 </div>
                 <h3>{item.name}</h3>
                 <p>{item.description}</p>
-                <div className="bf-service-bottom">
+                <div className="bqf-service-bottom">
                   <span>{item.professionalName}</span>
                   <strong>Desde {money(item.priceCents)}</strong>
                 </div>
                 <button
-                  className="bf-text-action"
+                  className="bqf-text-action"
                   onClick={() => {
                     setServiceId(item.id);
                     setSlots([]);
@@ -1396,17 +1396,17 @@ function ExplorePage({
           ))}
         </div>
         {!catalog.services.length && (
-          <div className="bf-empty">
+          <div className="bqf-empty">
             No hay servicios para mostrar. Intenta otra búsqueda.
           </div>
         )}
         {catalog.spaces.length > 0 && (
-          <div className="bf-space-strip">
+          <div className="bqf-space-strip">
             <div>
-              <span className="bf-kicker">ESPACIOS DISPONIBLES</span>
+              <span className="bqf-kicker">ESPACIOS DISPONIBLES</span>
               <h3>El sitio también forma parte de la sesión.</h3>
             </div>
-            <div className="bf-space-chips">
+            <div className="bqf-space-chips">
               {catalog.spaces.slice(0, 5).map((space) => (
                 <span key={space.id}>
                   <b>{space.kind === "gym" ? "⌂" : "◇"}</b>
@@ -1419,9 +1419,9 @@ function ExplorePage({
         )}
       </section>
       {!actor && (
-        <section className="bf-signin-cta">
+        <section className="bqf-signin-cta">
           <div>
-            <span className="bf-kicker">¿LISTA PARA RESERVAR?</span>
+            <span className="bqf-kicker">¿LISTA PARA RESERVAR?</span>
             <h2>Prueba el recorrido con un perfil local.</h2>
             <p>
               La sesión se guarda en el servidor y puedes cambiar entre cliente,
@@ -1429,7 +1429,7 @@ function ExplorePage({
             </p>
           </div>
           <button
-            className="bf-button bf-button-dark"
+            className="bqf-button bqf-button-dark"
             onClick={onLogin}
             type="button"
           >
@@ -1447,7 +1447,7 @@ function AgendaPage({
   onRefresh,
   onFeedback,
 }: {
-  actor: BookFitActor;
+  actor: BuqFitActor;
   agenda: AgendaEvent[];
   onRefresh: () => Promise<void>;
   onFeedback: (feedback: Feedback) => void;
@@ -1469,7 +1469,7 @@ function AgendaPage({
       return;
     setBusyId(event.occurrenceId);
     try {
-      await bookfitApi.post(`/occurrences/${event.occurrenceId}/cancel`, {});
+      await buqfitApi.post(`/occurrences/${event.occurrenceId}/cancel`, {});
       onFeedback({
         kind: "success",
         message:
@@ -1491,7 +1491,7 @@ function AgendaPage({
     if (!sendingFor) return;
     setBusyId(event.occurrenceId);
     try {
-      await bookfitApi.post("/information-requests", {
+      await buqfitApi.post("/information-requests", {
         bookingOccurrenceId: sendingFor.occurrenceId,
         recipientKind: sendingFor.kind,
         body: body.trim(),
@@ -1519,17 +1519,17 @@ function AgendaPage({
 
   const canSendRequest = hasRole(actor, "professional");
   return (
-    <section className="bf-page bf-agenda-page">
-      <div className="bf-page-hero">
+    <section className="bqf-page bqf-agenda-page">
+      <div className="bqf-page-hero">
         <div>
-          <span className="bf-kicker">TU ACTIVIDAD</span>
+          <span className="bqf-kicker">TU ACTIVIDAD</span>
           <h1>Agenda</h1>
           <p>
             Las sesiones que puedes consultar según tu perfil. La información
             privada de otros participantes no se muestra.
           </p>
         </div>
-        <div className="bf-agenda-count">
+        <div className="bqf-agenda-count">
           <strong>
             {sorted.filter((event) => event.status === "confirmed").length}
           </strong>
@@ -1537,18 +1537,18 @@ function AgendaPage({
         </div>
       </div>
       {!sorted.length ? (
-        <div className="bf-empty bf-empty-large">
+        <div className="bqf-empty bqf-empty-large">
           <strong>Aún no hay sesiones en tu agenda.</strong>
           <span>
             Cuando una reserva se confirme, aparecerá aquí y seguirá guardada
-            tras reiniciar BookFit.
+            tras reiniciar BuqFit.
           </span>
         </div>
       ) : (
-        <div className="bf-agenda-list">
+        <div className="bqf-agenda-list">
           {sorted.map((event) => (
-            <article className="bf-agenda-card" key={event.occurrenceId}>
-              <div className="bf-agenda-date">
+            <article className="bqf-agenda-card" key={event.occurrenceId}>
+              <div className="bqf-agenda-date">
                 <strong>{new Date(`${event.date}T12:00:00`).getDate()}</strong>
                 <span>
                   {new Intl.DateTimeFormat("es-ES", { month: "short" }).format(
@@ -1557,10 +1557,10 @@ function AgendaPage({
                 </span>
                 <small>{formatDate(event.date)}</small>
               </div>
-              <div className="bf-agenda-main">
-                <div className="bf-agenda-title">
+              <div className="bqf-agenda-main">
+                <div className="bqf-agenda-title">
                   <div>
-                    <span className="bf-kicker">
+                    <span className="bqf-kicker">
                       {event.status === "confirmed"
                         ? "CONFIRMADA"
                         : event.status === "cancelled"
@@ -1569,7 +1569,7 @@ function AgendaPage({
                     </span>
                     <h2>{event.serviceName}</h2>
                   </div>
-                  <span className={`bf-status bf-status-${event.status}`}>
+                  <span className={`bqf-status bqf-status-${event.status}`}>
                     {event.status === "confirmed"
                       ? "Confirmada"
                       : event.status === "cancelled"
@@ -1577,7 +1577,7 @@ function AgendaPage({
                         : "Pendiente"}
                   </span>
                 </div>
-                <div className="bf-agenda-facts">
+                <div className="bqf-agenda-facts">
                   <span>
                     ◷ {formatTime(event.start)}–{formatTime(event.end)}
                   </span>
@@ -1589,15 +1589,15 @@ function AgendaPage({
                 </div>
                 {hasRole(actor, "client") &&
                   event.clientActorId === actor.actorId && (
-                    <p className="bf-agenda-private">
+                    <p className="bqf-agenda-private">
                       Cliente: {event.clientName}
                     </p>
                   )}
-                <div className="bf-agenda-actions">
+                <div className="bqf-agenda-actions">
                   {event.status === "confirmed" &&
                     event.clientActorId === actor.actorId && (
                       <button
-                        className="bf-button bf-button-outline bf-small"
+                        className="bqf-button bqf-button-outline bqf-small"
                         disabled={busyId === event.occurrenceId}
                         onClick={() => void cancel(event)}
                         type="button"
@@ -1610,7 +1610,7 @@ function AgendaPage({
                     event.professionalId === actor.professionalId && (
                       <>
                         <button
-                          className="bf-text-action"
+                          className="bqf-text-action"
                           onClick={() => {
                             setSendingFor({
                               occurrenceId: event.occurrenceId,
@@ -1624,7 +1624,7 @@ function AgendaPage({
                         </button>
                         {event.spaceId && (
                           <button
-                            className="bf-text-action"
+                            className="bqf-text-action"
                             onClick={() => {
                               setSendingFor({
                                 occurrenceId: event.occurrenceId,
@@ -1642,20 +1642,20 @@ function AgendaPage({
                 </div>
                 {sendingFor?.occurrenceId === event.occurrenceId && (
                   <form
-                    className="bf-request-composer"
+                    className="bqf-request-composer"
                     onSubmit={(submitEvent) => {
                       submitEvent.preventDefault();
                       void sendRequest(event);
                     }}
                   >
-                    <label htmlFor={`bf-request-${event.occurrenceId}`}>
+                    <label htmlFor={`bqf-request-${event.occurrenceId}`}>
                       Solicitud para{" "}
                       {sendingFor.kind === "client"
                         ? event.clientName
                         : "el gestor del espacio"}
                     </label>
                     <textarea
-                      id={`bf-request-${event.occurrenceId}`}
+                      id={`bqf-request-${event.occurrenceId}`}
                       maxLength={1200}
                       minLength={1}
                       onChange={(inputEvent) =>
@@ -1665,20 +1665,20 @@ function AgendaPage({
                       required
                       value={body}
                     />
-                    <div className="bf-request-actions">
+                    <div className="bqf-request-actions">
                       <small>
                         {body.length}/1200 · solo texto, sin chat ni respuesta
                         abierta
                       </small>
                       <button
-                        className="bf-button bf-button-primary bf-small"
+                        className="bqf-button bqf-button-primary bqf-small"
                         disabled={busyId === event.occurrenceId || !body.trim()}
                         type="submit"
                       >
                         Enviar solicitud
                       </button>
                       <button
-                        className="bf-link-button"
+                        className="bqf-link-button"
                         onClick={() => setSendingFor(null)}
                         type="button"
                       >
@@ -1701,7 +1701,7 @@ function ProfessionalPage({
   catalog,
   onFeedback,
 }: {
-  actor: BookFitActor;
+  actor: BuqFitActor;
   catalog: Catalog;
   onFeedback: (feedback: Feedback) => void;
 }) {
@@ -1713,7 +1713,7 @@ function ProfessionalPage({
   );
   useEffect(() => {
     let active = true;
-    bookfitApi
+    buqfitApi
       .get<ProfessionalPreferences>("/professional/preferences")
       .then((value) => {
         if (active) setPreferences(value);
@@ -1754,7 +1754,7 @@ function ProfessionalPage({
     if (!preferences) return;
     setBusy(true);
     try {
-      const saved = await bookfitApi.patch<ProfessionalPreferences>(
+      const saved = await buqfitApi.patch<ProfessionalPreferences>(
         "/professional/preferences",
         preferences,
       );
@@ -1776,42 +1776,42 @@ function ProfessionalPage({
 
   if (!hasRole(actor, "professional")) return <NoAccess />;
   return (
-    <section className="bf-page">
-      <div className="bf-page-hero">
+    <section className="bqf-page">
+      <div className="bqf-page-hero">
         <div>
-          <span className="bf-kicker">PERFIL PROFESIONAL</span>
+          <span className="bqf-kicker">PERFIL PROFESIONAL</span>
           <h1>Tu forma de trabajar.</h1>
           <p>
             Configura la zona, los desplazamientos y las modalidades que el
             servidor usará para calcular huecos viables.
           </p>
         </div>
-        <div className="bf-preference-stat">
+        <div className="bqf-preference-stat">
           <span>RADIO MÁXIMO</span>
           <strong>{preferences?.maxRadiusKm ?? "—"} km</strong>
           <small>desde tu ubicación base</small>
         </div>
       </div>
-      <div className="bf-settings-grid">
+      <div className="bqf-settings-grid">
         <form
-          className="bf-panel bf-preferences-form"
+          className="bqf-panel bqf-preferences-form"
           onSubmit={(event) => void save(event)}
         >
-          <div className="bf-panel-heading">
+          <div className="bqf-panel-heading">
             <div>
-              <span className="bf-kicker">PREFERENCIAS</span>
+              <span className="bqf-kicker">PREFERENCIAS</span>
               <h2>Agenda y desplazamientos</h2>
             </div>
-            <span className="bf-local-tag">Guardado en PostgreSQL</span>
+            <span className="bqf-local-tag">Guardado en PostgreSQL</span>
           </div>
           {!preferences ? (
             <p>Cargando preferencias…</p>
           ) : (
             <>
-              <div className="bf-field">
-                <label htmlFor="bf-base-location">Ubicación base</label>
+              <div className="bqf-field">
+                <label htmlFor="bqf-base-location">Ubicación base</label>
                 <select
-                  id="bf-base-location"
+                  id="bqf-base-location"
                   onChange={(event) =>
                     patch({ baseLocationId: event.currentTarget.value })
                   }
@@ -1826,16 +1826,16 @@ function ProfessionalPage({
                     ))}
                 </select>
               </div>
-              <div className="bf-form-row">
+              <div className="bqf-form-row">
                 <NumberField
-                  id="bf-radius"
+                  id="bqf-radius"
                   label="Radio máximo (km)"
                   value={preferences.maxRadiusKm}
                   max={200}
                   onChange={(value) => patch({ maxRadiusKm: value })}
                 />
                 <NumberField
-                  id="bf-travel"
+                  id="bqf-travel"
                   label="Desplazamiento máximo (min)"
                   value={preferences.maxTravelMinutes}
                   max={360}
@@ -1843,15 +1843,15 @@ function ProfessionalPage({
                 />
               </div>
               <NumberField
-                id="bf-buffer"
+                id="bqf-buffer"
                 label="Margen entre sesiones (min)"
                 value={preferences.bufferMinutes}
                 max={180}
                 onChange={(value) => patch({ bufferMinutes: value })}
               />
-              <fieldset className="bf-modality-fieldset">
+              <fieldset className="bqf-modality-fieldset">
                 <legend>Modalidades que ofreces</legend>
-                <div className="bf-modality-grid">
+                <div className="bqf-modality-grid">
                   {BOOKING_MODES.map((item) => (
                     <label key={item.value}>
                       <input
@@ -1865,7 +1865,7 @@ function ProfessionalPage({
                 </div>
               </fieldset>
               <button
-                className="bf-button bf-button-primary"
+                className="bqf-button bqf-button-primary"
                 disabled={busy}
                 type="submit"
               >
@@ -1874,26 +1874,26 @@ function ProfessionalPage({
             </>
           )}
         </form>
-        <aside className="bf-panel bf-professional-card">
-          <span className="bf-avatar bf-avatar-lime bf-avatar-large">
+        <aside className="bqf-panel bqf-professional-card">
+          <span className="bqf-avatar bqf-avatar-lime bqf-avatar-large">
             {initials(professional?.name ?? actor.name)}
           </span>
-          <span className="bf-kicker">
+          <span className="bqf-kicker">
             {professional?.headline ?? "Profesional"}
           </span>
           <h2>{professional?.name ?? actor.name}</h2>
           <p>{professional?.bio ?? "Tu perfil profesional."}</p>
-          <span className="bf-location-pill">
+          <span className="bqf-location-pill">
             ⌖ {professional?.publicZone ?? "València"}
           </span>
-          <div className="bf-tags">
+          <div className="bqf-tags">
             {(professional?.categories ?? []).map((category) => (
               <span key={category}>{category}</span>
             ))}
           </div>
-          <div className="bf-divider" />
-          <span className="bf-kicker">SERVICIOS PUBLICADOS</span>
-          <ul className="bf-service-list">
+          <div className="bqf-divider" />
+          <span className="bqf-kicker">SERVICIOS PUBLICADOS</span>
+          <ul className="bqf-service-list">
             {catalog.services
               .filter((item) => item.professionalId === actor.professionalId)
               .map((item) => (
@@ -1903,8 +1903,8 @@ function ProfessionalPage({
                 </li>
               ))}
           </ul>
-          <p className="bf-privacy-note">
-            La agenda privada no se enseña al público. BookFit publica solo los
+          <p className="bqf-privacy-note">
+            La agenda privada no se enseña al público. BuqFit publica solo los
             huecos que cumplen tus horarios y el tiempo de viaje.
           </p>
         </aside>
@@ -1927,7 +1927,7 @@ function NumberField({
   onChange: (value: number) => void;
 }) {
   return (
-    <div className="bf-field">
+    <div className="bqf-field">
       <label htmlFor={id}>{label}</label>
       <input
         id={id}
@@ -1946,7 +1946,7 @@ function SpacesPage({
   spaces,
   onFeedback,
 }: {
-  actor: BookFitActor;
+  actor: BuqFitActor;
   spaces: Space[];
   onFeedback: (feedback: Feedback) => void;
 }) {
@@ -1960,7 +1960,7 @@ function SpacesPage({
 
   useEffect(() => {
     let active = true;
-    bookfitApi
+    buqfitApi
       .get<Space[] | { spaces?: Space[] }>("/my-spaces")
       .then((result) => {
         if (!active) return;
@@ -1993,7 +1993,7 @@ function SpacesPage({
     let active = true;
     const from = startOfToday();
     const to = dateAfter(30);
-    bookfitApi
+    buqfitApi
       .get<SpaceMetrics>(
         `/my-spaces/${selectedSpaceId}/metrics?from=${from}&to=${to}`,
       )
@@ -2021,32 +2021,32 @@ function SpacesPage({
     Math.max(0, metrics?.utilizationPercent ?? 0),
   );
   return (
-    <section className="bf-page">
-      <div className="bf-page-hero">
+    <section className="bqf-page">
+      <div className="bqf-page-hero">
         <div>
-          <span className="bf-kicker">GESTIÓN DE ESPACIOS</span>
+          <span className="bqf-kicker">GESTIÓN DE ESPACIOS</span>
           <h1>Tu espacio en movimiento.</h1>
           <p>
             Consulta reservas confirmadas y una estimación de uso e ingresos
             desde los datos persistidos.
           </p>
         </div>
-        <div className="bf-preference-stat">
+        <div className="bqf-preference-stat">
           <span>INVENTARIO VINCULADO</span>
           <strong>{ownedSpaceRows.length.toString().padStart(2, "0")}</strong>
           <small>espacios</small>
         </div>
       </div>
       {loading ? (
-        <div className="bf-empty">Cargando inventario…</div>
+        <div className="bqf-empty">Cargando inventario…</div>
       ) : !ownedSpaceRows.length ? (
         <NoAccess message="Esta cuenta no tiene espacios vinculados." />
       ) : (
         <>
-          <div className="bf-space-select-row">
-            <label htmlFor="bf-owned-space">Espacio</label>
+          <div className="bqf-space-select-row">
+            <label htmlFor="bqf-owned-space">Espacio</label>
             <select
-              id="bf-owned-space"
+              id="bqf-owned-space"
               onChange={(event) =>
                 setSelectedSpaceId(event.currentTarget.value)
               }
@@ -2061,24 +2061,24 @@ function SpacesPage({
             <span>Próximos 30 días</span>
           </div>
           {selected && (
-            <section className="bf-space-overview">
-              <div className="bf-space-overview-art">
-                <span className="bf-kicker">
+            <section className="bqf-space-overview">
+              <div className="bqf-space-overview-art">
+                <span className="bqf-kicker">
                   {selected.kind === "gym" ? "GIMNASIO" : "SALA"} ·{" "}
                   {selected.locationName}
                 </span>
                 <h2>{selected.name}</h2>
                 <p>{selected.description}</p>
-                <div className="bf-tags">
+                <div className="bqf-tags">
                   {selected.amenities.map((amenity) => (
                     <span key={amenity}>{amenity}</span>
                   ))}
                 </div>
               </div>
-              <div className="bf-space-capacity">
-                <span className="bf-kicker">USO DEL ESPACIO</span>
+              <div className="bqf-space-capacity">
+                <span className="bqf-kicker">USO DEL ESPACIO</span>
                 <strong>{utilization}%</strong>
-                <div className="bf-progress">
+                <div className="bqf-progress">
                   <span style={{ width: `${utilization}%` }} />
                 </div>
                 <small>
@@ -2088,7 +2088,7 @@ function SpacesPage({
               </div>
             </section>
           )}
-          <div className="bf-metrics-grid">
+          <div className="bqf-metrics-grid">
             <MetricCard
               label="Reservas confirmadas"
               value={String(metrics?.confirmedOccurrences ?? 0)}
@@ -2111,7 +2111,7 @@ function SpacesPage({
               highlight
             />
           </div>
-          <p className="bf-note">
+          <p className="bqf-note">
             Las métricas excluyen retenciones y pagos fallidos. Las tarifas y
             comisiones siguen siendo datos de prueba.
           </p>
@@ -2133,7 +2133,7 @@ function MetricCard({
   highlight?: boolean;
 }) {
   return (
-    <article className={`bf-metric-card${highlight ? " is-highlight" : ""}`}>
+    <article className={`bqf-metric-card${highlight ? " is-highlight" : ""}`}>
       <span>{label}</span>
       <strong>{value}</strong>
       <small>{foot}</small>
@@ -2147,7 +2147,7 @@ function RequestsPage({
   onRefresh,
   onFeedback,
 }: {
-  actor: BookFitActor;
+  actor: BuqFitActor;
   requests: InformationRequest[];
   onRefresh: () => Promise<void>;
   onFeedback: (feedback: Feedback) => void;
@@ -2164,7 +2164,7 @@ function RequestsPage({
   async function markRead(request: InformationRequest): Promise<void> {
     setBusyId(request.id);
     try {
-      await bookfitApi.patch(`/information-requests/${request.id}/read`, {});
+      await buqfitApi.patch(`/information-requests/${request.id}/read`, {});
       await onRefresh();
     } catch (error) {
       onFeedback({
@@ -2180,10 +2180,10 @@ function RequestsPage({
   }
 
   return (
-    <section className="bf-page">
-      <div className="bf-page-hero">
+    <section className="bqf-page">
+      <div className="bqf-page-hero">
         <div>
-          <span className="bf-kicker">INFORMACIÓN DE RESERVA</span>
+          <span className="bqf-kicker">INFORMACIÓN DE RESERVA</span>
           <h1>Solicitudes</h1>
           <p>
             El profesional puede pedir información al cliente o al gestor
@@ -2191,7 +2191,7 @@ function RequestsPage({
             chat ni respuestas.
           </p>
         </div>
-        <div className="bf-preference-stat">
+        <div className="bqf-preference-stat">
           <span>NO LEÍDAS</span>
           <strong>
             {
@@ -2205,24 +2205,24 @@ function RequestsPage({
         </div>
       </div>
       {!related.length ? (
-        <div className="bf-empty bf-empty-large">
+        <div className="bqf-empty bqf-empty-large">
           <strong>No hay solicitudes.</strong>
           <span>
             Las solicitudes relacionadas con tus reservas aparecerán aquí.
           </span>
         </div>
       ) : (
-        <div className="bf-request-list">
+        <div className="bqf-request-list">
           {related.map((request) => {
             const received = request.recipientActorId === actor.actorId;
             return (
               <article
-                className={`bf-request-card${received && !request.readAt ? " is-unread" : ""}`}
+                className={`bqf-request-card${received && !request.readAt ? " is-unread" : ""}`}
                 key={request.id}
               >
-                <div className="bf-request-top">
+                <div className="bqf-request-top">
                   <span
-                    className={`bf-request-direction ${received ? "is-incoming" : "is-outgoing"}`}
+                    className={`bqf-request-direction ${received ? "is-incoming" : "is-outgoing"}`}
                   >
                     {received ? "Recibida" : "Enviada"}
                   </span>
@@ -2236,16 +2236,16 @@ function RequestsPage({
                 <h2>
                   {request.serviceName} · {formatDate(request.serviceDate)}
                 </h2>
-                <p className="bf-request-participants">
+                <p className="bqf-request-participants">
                   {received
                     ? `De ${request.senderName}`
                     : `Para ${request.recipientName}`}{" "}
                   · reserva vinculada
                 </p>
-                <div className="bf-request-body">{request.body}</div>
+                <div className="bqf-request-body">{request.body}</div>
                 {received && !request.readAt && (
                   <button
-                    className="bf-button bf-button-outline bf-small"
+                    className="bqf-button bqf-button-outline bqf-small"
                     disabled={busyId === request.id}
                     onClick={() => void markRead(request)}
                     type="button"
@@ -2254,7 +2254,7 @@ function RequestsPage({
                   </button>
                 )}
                 {received && request.readAt && (
-                  <small className="bf-read-state">Leída</small>
+                  <small className="bqf-read-state">Leída</small>
                 )}
               </article>
             );
@@ -2279,25 +2279,25 @@ function CheckoutDialog({
   const canPay = checkout.status === "pending";
   return (
     <div
-      className="bf-overlay bf-checkout-overlay"
+      className="bqf-overlay bqf-checkout-overlay"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget && !busy) onClose();
       }}
     >
       <section
-        aria-labelledby="bf-checkout-title"
+        aria-labelledby="bqf-checkout-title"
         aria-modal="true"
-        className="bf-dialog bf-checkout-dialog"
+        className="bqf-dialog bqf-checkout-dialog"
         role="dialog"
       >
-        <div className="bf-dialog-head">
+        <div className="bqf-dialog-head">
           <div>
-            <span className="bf-kicker">CHECKOUT LOCAL</span>
-            <h2 id="bf-checkout-title">Revisa tu reserva</h2>
+            <span className="bqf-kicker">CHECKOUT LOCAL</span>
+            <h2 id="bqf-checkout-title">Revisa tu reserva</h2>
           </div>
           <button
             aria-label="Cerrar"
-            className="bf-close"
+            className="bqf-close"
             disabled={busy}
             onClick={onClose}
             type="button"
@@ -2310,7 +2310,7 @@ function CheckoutDialog({
           quedan retenidas durante 10 minutos.
         </p>
         {checkout.holdExpiresAt && (
-          <div className="bf-hold-timer">
+          <div className="bqf-hold-timer">
             <span>Retención hasta</span>
             <strong>
               {new Intl.DateTimeFormat("es-ES", {
@@ -2320,7 +2320,7 @@ function CheckoutDialog({
             </strong>
           </div>
         )}
-        <div className="bf-checkout-dates">
+        <div className="bqf-checkout-dates">
           {checkout.occurrences.map((occurrence) => (
             <span key={occurrence.id}>
               {formatDate(occurrence.date)} · {formatTime(occurrence.start)}–
@@ -2328,7 +2328,7 @@ function CheckoutDialog({
             </span>
           ))}
         </div>
-        <ul className="bf-price-lines">
+        <ul className="bqf-price-lines">
           {checkout.lines.map((line, index) => (
             <li key={`${line.occurrenceId}-${line.kind}-${index}`}>
               <span>{line.description}</span>
@@ -2336,16 +2336,16 @@ function CheckoutDialog({
             </li>
           ))}
         </ul>
-        <div className="bf-checkout-total">
+        <div className="bqf-checkout-total">
           <span>Total</span>
           <strong>{money(checkout.totalCents)}</strong>
         </div>
         {canPay ? (
-          <div className="bf-payment-options">
-            <span className="bf-kicker">ELIGE EL RESULTADO DE PRUEBA</span>
-            <div className="bf-payment-buttons">
+          <div className="bqf-payment-options">
+            <span className="bqf-kicker">ELIGE EL RESULTADO DE PRUEBA</span>
+            <div className="bqf-payment-buttons">
               <button
-                className="bf-button bf-button-primary"
+                className="bqf-button bqf-button-primary"
                 disabled={busy}
                 onClick={() => void onPay("success")}
                 type="button"
@@ -2353,7 +2353,7 @@ function CheckoutDialog({
                 {busy ? "Procesando…" : "Pago correcto"}
               </button>
               <button
-                className="bf-button bf-button-outline"
+                className="bqf-button bqf-button-outline"
                 disabled={busy}
                 onClick={() => void onPay("failure")}
                 type="button"
@@ -2361,7 +2361,7 @@ function CheckoutDialog({
                 Simular fallo
               </button>
               <button
-                className="bf-button bf-button-danger"
+                className="bqf-button bqf-button-danger"
                 disabled={busy}
                 onClick={() => void onPay("expired")}
                 type="button"
@@ -2374,7 +2374,7 @@ function CheckoutDialog({
             </small>
           </div>
         ) : (
-          <div className={`bf-checkout-result bf-result-${checkout.status}`}>
+          <div className={`bqf-checkout-result bqf-result-${checkout.status}`}>
             <strong>
               {checkout.status === "paid"
                 ? "Reserva confirmada"
@@ -2388,7 +2388,7 @@ function CheckoutDialog({
                 : "No se ha confirmado ni cobrado una reserva."}
             </span>
             <button
-              className="bf-button bf-button-dark"
+              className="bqf-button bqf-button-dark"
               onClick={onClose}
               type="button"
             >
@@ -2407,7 +2407,7 @@ function NoAccess({
   message?: string;
 }) {
   return (
-    <div className="bf-empty bf-empty-large">
+    <div className="bqf-empty bqf-empty-large">
       <strong>Sección no disponible</strong>
       <span>{message}</span>
     </div>

@@ -15,7 +15,7 @@ const status = spawnSync(
 
 if (status.status !== 0) {
   process.stderr.write(
-    "Supabase local no responde. Inicia BookFit local y aplica las migraciones antes de configurar el entorno.\n",
+    "Supabase local no responde. Inicia BuqFit local y aplica las migraciones antes de configurar el entorno.\n",
   );
   process.exit(status.status ?? 1);
 }
@@ -44,19 +44,19 @@ const configured = spawnSync(
     "-v",
     "ON_ERROR_STOP=1",
     "-c",
-    `ALTER ROLE bookfit_runtime WITH LOGIN PASSWORD '${password}'`,
+    `ALTER ROLE buqfit_runtime WITH LOGIN PASSWORD '${password}'`,
   ],
   { encoding: "utf8", stdio: ["ignore", "ignore", "pipe"] },
 );
 if (configured.status !== 0) {
   process.stderr.write(
-    "No se pudo configurar la credencial de ejecución bookfit_runtime. Comprueba que la migración ya se aplicó.\n",
+    "No se pudo configurar la credencial de ejecución buqfit_runtime. Comprueba que la migración ya se aplicó.\n",
   );
   process.exit(configured.status ?? 1);
 }
 
 const runtimeUrl = new URL(migrationUrl);
-runtimeUrl.username = "bookfit_runtime";
+runtimeUrl.username = "buqfit_runtime";
 runtimeUrl.password = password;
 const localEnv = [
   "# Generated locally. Do not commit or copy these credentials to VITE_* variables.",
@@ -64,8 +64,8 @@ const localEnv = [
   "NODE_ENV=development",
   "API_HOST=127.0.0.1",
   "API_PORT=3001",
-  "BOOKFIT_DEV_PROFILES=true",
-  "BOOKFIT_PAYMENT_MODE=fake",
+  "BUQFIT_DEV_PROFILES=true",
+  "BUQFIT_PAYMENT_MODE=fake",
   "SESSION_TTL_HOURS=168",
   "",
 ].join("\n");
@@ -73,5 +73,5 @@ const target = resolve(process.cwd(), ".env.local");
 await writeFile(target, localEnv, { mode: 0o600 });
 await chmod(target, 0o600);
 process.stdout.write(
-  "Entorno local escrito en .env.local; la API usará bookfit_runtime.\n",
+  "Entorno local escrito en .env.local; la API usará buqfit_runtime.\n",
 );

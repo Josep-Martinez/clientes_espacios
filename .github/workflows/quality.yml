@@ -1,4 +1,4 @@
-name: BookFit quality gate
+name: BuqFit quality gate
 
 on:
   pull_request:
@@ -18,7 +18,7 @@ jobs:
     timeout-minutes: 30
     env:
       SUPABASE_TELEMETRY_DISABLED: "1"
-      BOOKFIT_REQUIRE_INTEGRATION: "true"
+      BUQFIT_REQUIRE_INTEGRATION: "true"
 
     steps:
       - name: Checkout
@@ -46,7 +46,7 @@ jobs:
 
       - name: Start isolated local Supabase
         run: |
-          log_file="$RUNNER_TEMP/bookfit-supabase-start.log"
+          log_file="$RUNNER_TEMP/buqfit-supabase-start.log"
           if ! pnpm local:start >"$log_file" 2>&1; then
             sed -E \
               -e 's#(postgres(ql)?://)[^[:space:]]+#\1[REDACTED]#g' \
@@ -57,7 +57,7 @@ jobs:
 
       - name: Reset local database from migrations and seeds
         run: |
-          log_file="$RUNNER_TEMP/bookfit-db-reset.log"
+          log_file="$RUNNER_TEMP/buqfit-db-reset.log"
           if ! pnpm exec supabase db reset --local >"$log_file" 2>&1; then
             sed -E \
               -e 's#(postgres(ql)?://)[^[:space:]]+#\1[REDACTED]#g' \

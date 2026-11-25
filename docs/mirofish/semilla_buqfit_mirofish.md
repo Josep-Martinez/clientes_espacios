@@ -1,8 +1,8 @@
-# BookFit — semilla de negocio para MiroFish
+# BuqFit — semilla de negocio para MiroFish
 
 ## Proyecto
 
-**BookFit** es el concepto de un marketplace web que coordina la contratación de servicios de bienestar y entrenamiento con el profesional y, cuando hace falta, un espacio adecuado. Los tres participantes posibles son el cliente, el profesional y el gestor del espacio.
+**BuqFit** es el concepto de un marketplace web que coordina la contratación de servicios de bienestar y entrenamiento con el profesional y, cuando hace falta, un espacio adecuado. Los tres participantes posibles son el cliente, el profesional y el gestor del espacio.
 
 La propuesta no consiste solo en alquilar salas ni solo en publicar perfiles. Busca resolver en un mismo recorrido la combinación de servicio, disponibilidad, lugar y reserva. El espacio es opcional; muchos servicios pueden prestarse a domicilio, en línea o en el espacio del profesional.
 
@@ -10,7 +10,7 @@ La propuesta no consiste solo en alquilar salas ni solo en publicar perfiles. Bu
 
 ### Clientes
 
-Personas que quieren encontrar o reservar entrenamiento personal, clases individuales o grupales, Pilates, yoga, movilidad, fisioterapia, podología, masaje o nutrición. Algunas podrían necesitar ayuda para encontrar profesional y horario; otras ya tienen un centro o especialista habitual y quizá no necesiten BookFit.
+Personas que quieren encontrar o reservar entrenamiento personal, clases individuales o grupales, Pilates, yoga, movilidad, fisioterapia, podología, masaje o nutrición. Algunas podrían necesitar ayuda para encontrar profesional y horario; otras ya tienen un centro o especialista habitual y quizá no necesiten BuqFit.
 
 ### Profesionales
 
@@ -33,7 +33,7 @@ Una misma persona puede ser profesional y gestora de un espacio.
 
 La dirección inicial del modelo contempla cobrar una comisión por las reservas del servicio y, cuando se usa un espacio, otra comisión asociada a esa reserva. No se ha aprobado ningún porcentaje, tarifa fija ni margen. No se prevé una suscripción de la plataforma en el lanzamiento inicial; cualquier alternativa puede analizarse como hipótesis, no como decisión.
 
-La actividad de BookFit depende de que coincidan oferta profesional, espacios adecuados y clientes en una misma zona y momento. Si falta uno de esos grupos, la propuesta puede perder valor para los otros. La densidad local, el lado más fácil de captar primero y la repetición de uso todavía no se han demostrado.
+La actividad de BuqFit depende de que coincidan oferta profesional, espacios adecuados y clientes en una misma zona y momento. Si falta uno de esos grupos, la propuesta puede perder valor para los otros. La densidad local, el lado más fácil de captar primero y la repetición de uso todavía no se han demostrado.
 
 ## Opciones de enfoque que el equipo quiere comparar
 
@@ -56,7 +56,7 @@ El material del proyecto no aporta entrevistas, observaciones de comportamiento,
 - ¿Qué segmento tiene una necesidad más frecuente y costosa de resolver?
 - ¿Para quién es esencial coordinar servicio y espacio en una sola reserva?
 - ¿Qué lado del marketplace se puede captar primero y qué tendría que estar disponible para atraer a los demás?
-- ¿Qué segmentos probarían BookFit una vez, volverían a usarla o publicarían su oferta de forma continuada?
+- ¿Qué segmentos probarían BuqFit una vez, volverían a usarla o publicarían su oferta de forma continuada?
 - ¿La comisión aporta suficiente valor para ambas partes o hace más atractiva la coordinación directa fuera de la plataforma?
 - ¿Qué categorías aportan valor y cuáles ampliarían demasiado el alcance antes de probar la propuesta principal?
 

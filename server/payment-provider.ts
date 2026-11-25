@@ -20,7 +20,7 @@ export interface PaymentProvider {
   }): Promise<{ outcome: FakePaymentOutcome }>;
 }
 
-/** Contract boundary for a later Stripe Checkout adapter. No card data enters BookFit. */
+/** Contract boundary for a later Stripe Checkout adapter. No card data enters BuqFit. */
 export class FakePaymentProvider implements PaymentProvider {
   readonly name = "fake" as const;
 

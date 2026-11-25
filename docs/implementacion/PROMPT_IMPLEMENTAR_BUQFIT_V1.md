@@ -1,9 +1,9 @@
-# Prompt para implementar BookFit V1
+# Prompt para implementar BuqFit V1
 
-Copia el bloque completo en el agente de código con acceso a este repositorio. Si el agente trabaja fuera del repositorio, adjunta también `PLAN_BOOKFIT_V1.md` y dale acceso al código.
+Copia el bloque completo en el agente de código con acceso a este repositorio. Si el agente trabaja fuera del repositorio, adjunta también `PLAN_BUQFIT_V1.md` y dale acceso al código.
 
 ~~~text
-Implementa la primera versión funcional local de BookFit en el repositorio clientes_espacios. Lee AGENTS.md, docs/implementacion/PLAN_BOOKFIT_V1.md, README.md y los módulos existentes antes de editar. Usa el plan como especificación funcional y técnica. Implementa y comprueba el resultado en esta sesión. Puedes delegar revisiones de base de datos, API y seguridad a subagentes, coordinando sus cambios.
+Implementa la primera versión funcional local de BuqFit en el repositorio clientes_espacios. Lee AGENTS.md, docs/implementacion/PLAN_BUQFIT_V1.md, README.md y los módulos existentes antes de editar. Usa el plan como especificación funcional y técnica. Implementa y comprueba el resultado en esta sesión. Puedes delegar revisiones de base de datos, API y seguridad a subagentes, coordinando sus cambios.
 
 Conserva React, Vite, TypeScript y pnpm. Añade Fastify y node-postgres. El frontend se comunica con /api y Fastify controla permisos, precios, disponibilidad, reservas y pagos. Usa PostgreSQL mediante Supabase CLI y Docker en este ordenador. El ejemplo de Vue con una tabla todos corresponde a otro proyecto. Para esta fase, node-postgres cubre el acceso a datos y el SDK @supabase/supabase-js se reserva para cuando integremos Supabase Auth. Puedes consultar las guías de Supabase y PostgreSQL disponibles en el entorno.
 

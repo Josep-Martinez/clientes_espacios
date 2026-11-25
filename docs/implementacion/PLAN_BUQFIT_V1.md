@@ -1,4 +1,4 @@
-# BookFit funcional · primera iteración
+# BuqFit funcional · primera iteración
 
 ## 1. Entrega y arquitectura
 

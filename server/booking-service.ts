@@ -13,7 +13,7 @@ import {
 } from "./availability.ts";
 import { inTransaction, type PoolClient } from "./db.ts";
 import type {
-  BookfitRow,
+  BuqFitRow,
   ProfessionalPreferencesRow,
 } from "./database-types.ts";
 import {
@@ -44,7 +44,7 @@ export interface CheckoutInput {
 }
 
 type ServiceRow = Pick<
-  BookfitRow<"services">,
+  BuqFitRow<"services">,
   | "id"
   | "professional_id"
   | "name"
@@ -58,7 +58,7 @@ type ServiceRow = Pick<
 type PreferencesRow = ProfessionalPreferencesRow;
 
 type SpaceRow = Pick<
-  BookfitRow<"spaces">,
+  BuqFitRow<"spaces">,
   | "id"
   | "kind"
   | "name"
@@ -92,30 +92,30 @@ export async function lockBookingState(client: PoolClient): Promise<void> {
 
 export async function expireStaleHolds(client: PoolClient): Promise<void> {
   const expired = await client.query<{ id: string }>(
-    `SELECT o.id FROM bookfit.orders o JOIN bookfit.checkout_holds h ON h.order_id=o.id
+    `SELECT o.id FROM buqfit.orders o JOIN buqfit.checkout_holds h ON h.order_id=o.id
       WHERE o.status='pending' AND h.status='active' AND h.expires_at<=now()
       ORDER BY o.id FOR UPDATE OF o`,
   );
   const ids = expired.rows.map((row) => row.id);
   if (!ids.length) return;
   await client.query(
-    "UPDATE bookfit.orders SET status='expired',updated_at=now() WHERE id=ANY($1::uuid[])",
+    "UPDATE buqfit.orders SET status='expired',updated_at=now() WHERE id=ANY($1::uuid[])",
     [ids],
   );
   await client.query(
-    "UPDATE bookfit.checkout_holds SET status='expired' WHERE order_id=ANY($1::uuid[]) AND status='active'",
+    "UPDATE buqfit.checkout_holds SET status='expired' WHERE order_id=ANY($1::uuid[]) AND status='active'",
     [ids],
   );
   await client.query(
-    "UPDATE bookfit.resource_allocations SET status='expired' WHERE order_id=ANY($1::uuid[]) AND status='held'",
+    "UPDATE buqfit.resource_allocations SET status='expired' WHERE order_id=ANY($1::uuid[]) AND status='held'",
     [ids],
   );
   await client.query(
-    "UPDATE bookfit.seat_allocations SET status='expired' WHERE order_id=ANY($1::uuid[]) AND status='held'",
+    "UPDATE buqfit.seat_allocations SET status='expired' WHERE order_id=ANY($1::uuid[]) AND status='held'",
     [ids],
   );
   await client.query(
-    "UPDATE bookfit.gym_entitlements SET status='released' WHERE order_id=ANY($1::uuid[]) AND status='reserved'",
+    "UPDATE buqfit.gym_entitlements SET status='released' WHERE order_id=ANY($1::uuid[]) AND status='reserved'",
     [ids],
   );
 }
@@ -132,7 +132,7 @@ async function previousResponse<T>(
   hash: string,
 ): Promise<T | null> {
   const existing = await client.query<ExistingKeyRow>(
-    "SELECT request_hash,response FROM bookfit.idempotency_keys WHERE actor_id=$1 AND operation=$2 AND key=$3 FOR UPDATE",
+    "SELECT request_hash,response FROM buqfit.idempotency_keys WHERE actor_id=$1 AND operation=$2 AND key=$3 FOR UPDATE",
     [actorId, operation, key],
   );
   if (!existing.rowCount) return null;
@@ -154,7 +154,7 @@ async function insertKey(
   hash: string,
 ): Promise<void> {
   await client.query(
-    "INSERT INTO bookfit.idempotency_keys(actor_id,operation,key,request_hash) VALUES($1,$2,$3,$4)",
+    "INSERT INTO buqfit.idempotency_keys(actor_id,operation,key,request_hash) VALUES($1,$2,$3,$4)",
     [actorId, operation, key, hash],
   );
 }
@@ -167,7 +167,7 @@ async function saveKeyResponse(
   response: unknown,
 ): Promise<void> {
   await client.query(
-    "UPDATE bookfit.idempotency_keys SET response=$4::jsonb WHERE actor_id=$1 AND operation=$2 AND key=$3",
+    "UPDATE buqfit.idempotency_keys SET response=$4::jsonb WHERE actor_id=$1 AND operation=$2 AND key=$3",
     [actorId, operation, key, JSON.stringify(response)],
   );
 }
@@ -282,12 +282,12 @@ async function lockResources(
   );
   for (const row of ordered) {
     await client.query(
-      `INSERT INTO bookfit.resource_day_locks(resource_kind,resource_id,service_date)
+      `INSERT INTO buqfit.resource_day_locks(resource_kind,resource_id,service_date)
        VALUES($1,$2,$3) ON CONFLICT DO NOTHING`,
       [row.kind, row.id, row.date],
     );
     await client.query(
-      `SELECT 1 FROM bookfit.resource_day_locks
+      `SELECT 1 FROM buqfit.resource_day_locks
         WHERE resource_kind=$1 AND resource_id=$2 AND service_date=$3 FOR UPDATE`,
       [row.kind, row.id, row.date],
     );
@@ -321,7 +321,7 @@ async function resolveSpace(
     );
   const result = await client.query<SpaceRow>(
     `SELECT id,kind,name,location_id,capacity,price_per_occurrence_cents,equipment
-       FROM bookfit.spaces WHERE id=$1 AND kind=$2 AND capacity >= $3
+       FROM buqfit.spaces WHERE id=$1 AND kind=$2 AND capacity >= $3
          AND equipment @> $4::text[]`,
     [input.spaceId, input.mode, input.seats, input.requiredEquipment],
   );
@@ -333,7 +333,7 @@ async function resolveSpace(
       "space_incompatible",
     );
   const opening = await client.query<{ opens_at: string; closes_at: string }>(
-    `SELECT opens_at::text,closes_at::text FROM bookfit.space_opening_hours
+    `SELECT opens_at::text,closes_at::text FROM buqfit.space_opening_hours
       WHERE space_id=$1 AND weekday=$2`,
     [space.id, input.interval.weekday],
   );
@@ -350,7 +350,7 @@ async function resolveSpace(
     );
   }
   const blocked = await client.query(
-    `SELECT 1 FROM bookfit.space_blocks WHERE space_id=$1 AND starts_at<$3 AND ends_at>$2 LIMIT 1`,
+    `SELECT 1 FROM buqfit.space_blocks WHERE space_id=$1 AND starts_at<$3 AND ends_at>$2 LIMIT 1`,
     [
       space.id,
       input.interval.startsAt.toISOString(),
@@ -377,9 +377,9 @@ async function ensureSpaceFree(
   interval: ReturnType<typeof createLocalInterval>,
 ): Promise<void> {
   const occupied = await client.query(
-    `SELECT 1 FROM bookfit.resource_allocations ra
-       LEFT JOIN bookfit.orders o ON o.id=ra.order_id
-       LEFT JOIN bookfit.checkout_holds h ON h.order_id=o.id
+    `SELECT 1 FROM buqfit.resource_allocations ra
+       LEFT JOIN buqfit.orders o ON o.id=ra.order_id
+       LEFT JOIN buqfit.checkout_holds h ON h.order_id=o.id
       WHERE ra.resource_kind='space' AND ra.resource_id=$1
         AND ra.starts_at<$3 AND ra.ends_at>$2
         AND (ra.status='confirmed' AND (ra.order_id IS NULL OR o.status='paid')
@@ -407,7 +407,7 @@ async function ensureProfessionalFree(input: {
     opens_at: string;
     closes_at: string;
   }>(
-    `SELECT opens_at::text,closes_at::text FROM bookfit.professional_hours
+    `SELECT opens_at::text,closes_at::text FROM buqfit.professional_hours
       WHERE professional_id=$1 AND weekday=$2`,
     [input.professionalId, input.interval.weekday],
   );
@@ -483,7 +483,7 @@ export async function createCheckout(input: {
 
     const serviceResult = await client.query<ServiceRow>(
       `SELECT id,professional_id,name,service_format,duration_minutes,price_cents,modalities,required_equipment
-         FROM bookfit.services WHERE id=$1`,
+         FROM buqfit.services WHERE id=$1`,
       [input.body.serviceId],
     );
     const service = serviceResult.rows[0];
@@ -530,7 +530,7 @@ export async function createCheckout(input: {
     }
 
     const prefResult = await client.query<PreferencesRow>(
-      "SELECT base_location_id,max_radius_km,max_travel_minutes,buffer_minutes,modalities FROM bookfit.professional_preferences WHERE professional_id=$1",
+      "SELECT base_location_id,max_radius_km,max_travel_minutes,buffer_minutes,modalities FROM buqfit.professional_preferences WHERE professional_id=$1",
       [service.professional_id],
     );
     const preferences = prefResult.rows[0];
@@ -562,7 +562,7 @@ export async function createCheckout(input: {
         );
       }
       const activeEntitlement = await client.query(
-        `SELECT 1 FROM bookfit.gym_entitlements WHERE client_actor_id=$1 AND space_id=$2 AND status IN ('reserved','consumed') LIMIT 1`,
+        `SELECT 1 FROM buqfit.gym_entitlements WHERE client_actor_id=$1 AND space_id=$2 AND status IN ('reserved','consumed') LIMIT 1`,
         [input.actor.actorId, selectedGymId],
       );
       firstGymEntryAvailable = !activeEntitlement.rowCount;
@@ -586,7 +586,7 @@ export async function createCheckout(input: {
           location_id: string;
         }>(
           `SELECT c.id,c.service_id,c.service_date::text AS service_date,c.starts_at,c.ends_at,c.capacity,c.professional_id,c.space_id,s.location_id
-             FROM bookfit.class_sessions c JOIN bookfit.spaces s ON s.id=c.space_id
+             FROM buqfit.class_sessions c JOIN buqfit.spaces s ON s.id=c.space_id
             WHERE c.id=$1`,
           [selected.classSessionId],
         );
@@ -611,7 +611,7 @@ export async function createCheckout(input: {
         startMinute = timeMinutes(localStart);
         sessionId = session.id;
         const spaceResult = await client.query<SpaceRow>(
-          "SELECT id,kind,name,location_id,capacity,price_per_occurrence_cents,equipment FROM bookfit.spaces WHERE id=$1",
+          "SELECT id,kind,name,location_id,capacity,price_per_occurrence_cents,equipment FROM buqfit.spaces WHERE id=$1",
           [session.space_id],
         );
         space = spaceResult.rows[0] ?? null;
@@ -670,7 +670,7 @@ export async function createCheckout(input: {
         const sessionEnd = new Date(
           (
             await client.query<{ ends_at: Date }>(
-              "SELECT ends_at FROM bookfit.class_sessions WHERE id=$1",
+              "SELECT ends_at FROM buqfit.class_sessions WHERE id=$1",
               [sessionId],
             )
           ).rows[0].ends_at,
@@ -684,7 +684,7 @@ export async function createCheckout(input: {
             ends_at: Date;
             service_date: string;
           }>(
-            "SELECT starts_at,ends_at,service_date FROM bookfit.class_sessions WHERE id=$1",
+            "SELECT starts_at,ends_at,service_date FROM buqfit.class_sessions WHERE id=$1",
             [sessionId],
           );
           interval.endsAt.setTime(new Date(classRow.rows[0].ends_at).getTime());
@@ -773,14 +773,14 @@ export async function createCheckout(input: {
     for (const slot of slots) {
       if (slot.sessionId) {
         const occupancy = await client.query<{ seats: string | number }>(
-          `SELECT COALESCE(sum(sa.seats),0) AS seats FROM bookfit.seat_allocations sa
-             JOIN bookfit.orders o ON o.id=sa.order_id
+          `SELECT COALESCE(sum(sa.seats),0) AS seats FROM buqfit.seat_allocations sa
+             JOIN buqfit.orders o ON o.id=sa.order_id
             WHERE sa.class_session_id=$1 AND (sa.status='confirmed' AND o.status='paid'
               OR sa.status='held' AND o.status='pending')`,
           [slot.sessionId],
         );
         const session = await client.query<{ capacity: number }>(
-          "SELECT capacity FROM bookfit.class_sessions WHERE id=$1",
+          "SELECT capacity FROM buqfit.class_sessions WHERE id=$1",
           [slot.sessionId],
         );
         if (
@@ -837,7 +837,7 @@ export async function createCheckout(input: {
     const spaceCommission = feeRows.reduce((sum, row) => sum + row.W, 0);
     const orderId = randomUUID();
     await client.query(
-      `INSERT INTO bookfit.orders(id,client_actor_id,professional_id,service_id,space_id,mode,seats,status,
+      `INSERT INTO buqfit.orders(id,client_actor_id,professional_id,service_id,space_id,mode,seats,status,
           subtotal_service_cents,service_commission_cents,subtotal_space_cents,space_commission_cents,total_cents)
        VALUES($1,$2,$3,$4,$5,$6,$7,'pending',$8,$9,$10,$11,$12)`,
       [
@@ -857,13 +857,13 @@ export async function createCheckout(input: {
     );
     if (firstGymEntryAvailable && selectedGymId) {
       await client.query(
-        `INSERT INTO bookfit.gym_entitlements(client_actor_id,space_id,order_id,status)
+        `INSERT INTO buqfit.gym_entitlements(client_actor_id,space_id,order_id,status)
          VALUES($1,$2,$3,'reserved')`,
         [input.actor.actorId, selectedGymId, orderId],
       );
     }
     const hold = await client.query<{ expires_at: Date }>(
-      `INSERT INTO bookfit.checkout_holds(order_id,status,expires_at)
+      `INSERT INTO buqfit.checkout_holds(order_id,status,expires_at)
        VALUES($1,'active',now()+interval '10 minutes') RETURNING expires_at`,
       [orderId],
     );
@@ -873,7 +873,7 @@ export async function createCheckout(input: {
       const occurrenceId = randomUUID();
       const fee = feeRows[index];
       await client.query(
-        `INSERT INTO bookfit.booking_occurrences(id,order_id,class_session_id,service_date,starts_at,ends_at,status,location_id,
+        `INSERT INTO buqfit.booking_occurrences(id,order_id,class_session_id,service_date,starts_at,ends_at,status,location_id,
             x_service_cents,z_service_commission_cents,y_space_cents,w_space_commission_cents)
          VALUES($1,$2,$3,$4,$5,$6,'pending',$7,$8,$9,$10,$11)`,
         [
@@ -894,14 +894,14 @@ export async function createCheckout(input: {
       checkoutLines.push(...lines);
       for (const line of lines) {
         await client.query(
-          `INSERT INTO bookfit.order_lines(occurrence_id,line_type,description,amount_cents)
+          `INSERT INTO buqfit.order_lines(occurrence_id,line_type,description,amount_cents)
            VALUES($1,$2,$3,$4)`,
           [occurrenceId, line.kind, line.description, line.amountCents],
         );
       }
       if (slot.sessionId) {
         await client.query(
-          `INSERT INTO bookfit.seat_allocations(order_id,class_session_id,client_actor_id,seats,status)
+          `INSERT INTO buqfit.seat_allocations(order_id,class_session_id,client_actor_id,seats,status)
            VALUES($1,$2,$3,$4,'held')`,
           [orderId, slot.sessionId, input.actor.actorId, input.body.seats],
         );
@@ -915,7 +915,7 @@ export async function createCheckout(input: {
           ];
         for (const resource of resources) {
           await client.query(
-            `INSERT INTO bookfit.resource_allocations(resource_kind,resource_id,location_id,service_date,starts_at,ends_at,order_id,status)
+            `INSERT INTO buqfit.resource_allocations(resource_kind,resource_id,location_id,service_date,starts_at,ends_at,order_id,status)
              VALUES($1,$2,$3,$4,$5,$6,$7,'held')`,
             [
               resource.kind,
@@ -952,7 +952,7 @@ export async function createCheckout(input: {
       response,
     );
     await client.query(
-      `INSERT INTO bookfit.audit_events(actor_id,action,entity_kind,entity_id,metadata)
+      `INSERT INTO buqfit.audit_events(actor_id,action,entity_kind,entity_id,metadata)
        VALUES($1,'checkout.created','order',$2,$3::jsonb)`,
       [
         input.actor.actorId,
@@ -989,7 +989,7 @@ export async function payCheckout(input: {
     total_cents: number;
     status: string;
   }>(
-    "SELECT total_cents,status FROM bookfit.orders WHERE id=$1 AND client_actor_id=$2",
+    "SELECT total_cents,status FROM buqfit.orders WHERE id=$1 AND client_actor_id=$2",
     [input.checkoutId, input.actor.actorId],
   );
   if (!before.rowCount)
@@ -1033,7 +1033,7 @@ export async function payCheckout(input: {
       hold_status: string | null;
     }>(
       `SELECT o.status,o.total_cents,h.expires_at AS hold_expires_at,h.status AS hold_status
-         FROM bookfit.orders o LEFT JOIN bookfit.checkout_holds h ON h.order_id=o.id
+         FROM buqfit.orders o LEFT JOIN buqfit.checkout_holds h ON h.order_id=o.id
         WHERE o.id=$1 AND o.client_actor_id=$2 FOR UPDATE OF o`,
       [input.checkoutId, input.actor.actorId],
     );
@@ -1046,7 +1046,7 @@ export async function payCheckout(input: {
       amount_cents: number;
       provider_reference: string | null;
     }>(
-      "SELECT id,status,amount_cents,provider_reference FROM bookfit.payment_attempts WHERE order_id=$1 FOR UPDATE",
+      "SELECT id,status,amount_cents,provider_reference FROM buqfit.payment_attempts WHERE order_id=$1 FOR UPDATE",
       [input.checkoutId],
     );
     let attempt = attemptResult.rows[0];
@@ -1069,14 +1069,14 @@ export async function payCheckout(input: {
         amount_cents: number;
         provider_reference: string;
       }>(
-        `INSERT INTO bookfit.payment_attempts(order_id,provider,provider_reference,status,amount_cents,currency)
+        `INSERT INTO buqfit.payment_attempts(order_id,provider,provider_reference,status,amount_cents,currency)
          VALUES($1,'fake',$2,'pending',$3,'EUR') RETURNING id,status,amount_cents,provider_reference`,
         [input.checkoutId, providerStart.providerReference, order.total_cents],
       );
       attempt = created.rows[0];
     }
     const eventExists = await client.query(
-      "SELECT 1 FROM bookfit.payment_events WHERE provider='fake' AND provider_event_id=$1",
+      "SELECT 1 FROM buqfit.payment_events WHERE provider='fake' AND provider_event_id=$1",
       [`fake-event:${input.checkoutId}:${input.idempotencyKey}`],
     );
     if (eventExists.rowCount) {
@@ -1109,7 +1109,7 @@ export async function payCheckout(input: {
         totalCents: order.total_cents,
       };
       await client.query(
-        `INSERT INTO bookfit.payment_events(provider,provider_event_id,payment_attempt_id,event_type)
+        `INSERT INTO buqfit.payment_events(provider,provider_event_id,payment_attempt_id,event_type)
          VALUES('fake',$1,$2,'fake.duplicate.ignored') ON CONFLICT DO NOTHING`,
         [`fake-event:${input.checkoutId}:${input.idempotencyKey}`, attempt.id],
       );
@@ -1125,11 +1125,11 @@ export async function payCheckout(input: {
     if (!order.hold_expires_at || order.hold_status !== "active") {
       await expireOrder(client, input.checkoutId);
       await client.query(
-        "UPDATE bookfit.payment_attempts SET status='expired',updated_at=now() WHERE id=$1",
+        "UPDATE buqfit.payment_attempts SET status='expired',updated_at=now() WHERE id=$1",
         [attempt.id],
       );
       await client.query(
-        `INSERT INTO bookfit.payment_events(provider,provider_event_id,payment_attempt_id,event_type)
+        `INSERT INTO buqfit.payment_events(provider,provider_event_id,payment_attempt_id,event_type)
          VALUES('fake',$1,$2,'fake.expired') ON CONFLICT DO NOTHING`,
         [`fake-event:${input.checkoutId}:${input.idempotencyKey}`, attempt.id],
       );
@@ -1159,53 +1159,53 @@ export async function payCheckout(input: {
     }
     if (providerResult.outcome === "success") {
       await client.query(
-        "UPDATE bookfit.orders SET status='paid',updated_at=now() WHERE id=$1",
+        "UPDATE buqfit.orders SET status='paid',updated_at=now() WHERE id=$1",
         [input.checkoutId],
       );
       await client.query(
-        "UPDATE bookfit.booking_occurrences SET status='confirmed' WHERE order_id=$1 AND status='pending'",
+        "UPDATE buqfit.booking_occurrences SET status='confirmed' WHERE order_id=$1 AND status='pending'",
         [input.checkoutId],
       );
       await client.query(
-        "UPDATE bookfit.resource_allocations SET status='confirmed' WHERE order_id=$1 AND status='held'",
+        "UPDATE buqfit.resource_allocations SET status='confirmed' WHERE order_id=$1 AND status='held'",
         [input.checkoutId],
       );
       await client.query(
-        "UPDATE bookfit.seat_allocations SET status='confirmed' WHERE order_id=$1 AND status='held'",
+        "UPDATE buqfit.seat_allocations SET status='confirmed' WHERE order_id=$1 AND status='held'",
         [input.checkoutId],
       );
       await client.query(
-        "UPDATE bookfit.checkout_holds SET status='confirmed' WHERE order_id=$1 AND status='active'",
+        "UPDATE buqfit.checkout_holds SET status='confirmed' WHERE order_id=$1 AND status='active'",
         [input.checkoutId],
       );
       await client.query(
-        "UPDATE bookfit.gym_entitlements SET status='consumed' WHERE order_id=$1 AND status='reserved'",
+        "UPDATE buqfit.gym_entitlements SET status='consumed' WHERE order_id=$1 AND status='reserved'",
         [input.checkoutId],
       );
     } else {
       const expired = providerResult.outcome === "expired";
       await client.query(
-        "UPDATE bookfit.orders SET status=$2,updated_at=now() WHERE id=$1",
+        "UPDATE buqfit.orders SET status=$2,updated_at=now() WHERE id=$1",
         [input.checkoutId, expired ? "expired" : "failed"],
       );
       await client.query(
-        "UPDATE bookfit.booking_occurrences SET status='cancelled' WHERE order_id=$1 AND status='pending'",
+        "UPDATE buqfit.booking_occurrences SET status='cancelled' WHERE order_id=$1 AND status='pending'",
         [input.checkoutId],
       );
       await client.query(
-        "UPDATE bookfit.resource_allocations SET status=$2 WHERE order_id=$1 AND status='held'",
+        "UPDATE buqfit.resource_allocations SET status=$2 WHERE order_id=$1 AND status='held'",
         [input.checkoutId, expired ? "expired" : "released"],
       );
       await client.query(
-        "UPDATE bookfit.seat_allocations SET status=$2 WHERE order_id=$1 AND status='held'",
+        "UPDATE buqfit.seat_allocations SET status=$2 WHERE order_id=$1 AND status='held'",
         [input.checkoutId, expired ? "expired" : "released"],
       );
       await client.query(
-        "UPDATE bookfit.checkout_holds SET status=$2 WHERE order_id=$1 AND status='active'",
+        "UPDATE buqfit.checkout_holds SET status=$2 WHERE order_id=$1 AND status='active'",
         [input.checkoutId, expired ? "expired" : "released"],
       );
       await client.query(
-        "UPDATE bookfit.gym_entitlements SET status='released' WHERE order_id=$1 AND status='reserved'",
+        "UPDATE buqfit.gym_entitlements SET status='released' WHERE order_id=$1 AND status='reserved'",
         [input.checkoutId],
       );
     }
@@ -1216,7 +1216,7 @@ export async function payCheckout(input: {
           ? "expired"
           : "failed";
     await client.query(
-      "UPDATE bookfit.payment_attempts SET status=$2,updated_at=now() WHERE id=$1",
+      "UPDATE buqfit.payment_attempts SET status=$2,updated_at=now() WHERE id=$1",
       [
         attempt.id,
         providerResult.outcome === "success"
@@ -1227,7 +1227,7 @@ export async function payCheckout(input: {
       ],
     );
     await client.query(
-      `INSERT INTO bookfit.payment_events(provider,provider_event_id,payment_attempt_id,event_type)
+      `INSERT INTO buqfit.payment_events(provider,provider_event_id,payment_attempt_id,event_type)
        VALUES('fake',$1,$2,$3) ON CONFLICT DO NOTHING`,
       [
         `fake-event:${input.checkoutId}:${input.idempotencyKey}`,
@@ -1248,7 +1248,7 @@ export async function payCheckout(input: {
       response,
     );
     await client.query(
-      `INSERT INTO bookfit.audit_events(actor_id,action,entity_kind,entity_id,metadata)
+      `INSERT INTO buqfit.audit_events(actor_id,action,entity_kind,entity_id,metadata)
        VALUES($1,$2,'order',$3,$4::jsonb)`,
       [
         input.actor.actorId,
@@ -1266,23 +1266,23 @@ async function expireOrder(
   checkoutId: string,
 ): Promise<void> {
   await client.query(
-    "UPDATE bookfit.orders SET status='expired',updated_at=now() WHERE id=$1 AND status='pending'",
+    "UPDATE buqfit.orders SET status='expired',updated_at=now() WHERE id=$1 AND status='pending'",
     [checkoutId],
   );
   await client.query(
-    "UPDATE bookfit.checkout_holds SET status='expired' WHERE order_id=$1 AND status='active'",
+    "UPDATE buqfit.checkout_holds SET status='expired' WHERE order_id=$1 AND status='active'",
     [checkoutId],
   );
   await client.query(
-    "UPDATE bookfit.resource_allocations SET status='expired' WHERE order_id=$1 AND status='held'",
+    "UPDATE buqfit.resource_allocations SET status='expired' WHERE order_id=$1 AND status='held'",
     [checkoutId],
   );
   await client.query(
-    "UPDATE bookfit.seat_allocations SET status='expired' WHERE order_id=$1 AND status='held'",
+    "UPDATE buqfit.seat_allocations SET status='expired' WHERE order_id=$1 AND status='held'",
     [checkoutId],
   );
   await client.query(
-    "UPDATE bookfit.gym_entitlements SET status='released' WHERE order_id=$1 AND status='reserved'",
+    "UPDATE buqfit.gym_entitlements SET status='released' WHERE order_id=$1 AND status='reserved'",
     [checkoutId],
   );
 }
@@ -1305,7 +1305,7 @@ export async function cancelOccurrence(input: {
       class_session_id: string | null;
     }>(
       `SELECT b.id,b.order_id,o.client_actor_id,b.status,b.service_date,b.starts_at,b.ends_at,b.class_session_id
-         FROM bookfit.booking_occurrences b JOIN bookfit.orders o ON o.id=b.order_id
+         FROM buqfit.booking_occurrences b JOIN buqfit.orders o ON o.id=b.order_id
         WHERE b.id=$1 AND o.client_actor_id=$2 FOR UPDATE OF b,o`,
       [input.occurrenceId, input.actor.actorId],
     );
@@ -1325,11 +1325,11 @@ export async function cancelOccurrence(input: {
       );
     }
     await client.query(
-      "UPDATE bookfit.booking_occurrences SET status='cancelled' WHERE id=$1",
+      "UPDATE buqfit.booking_occurrences SET status='cancelled' WHERE id=$1",
       [occurrence.id],
     );
     await client.query(
-      "UPDATE bookfit.resource_allocations SET status='released' WHERE order_id=$1 AND service_date=$2 AND starts_at=$3 AND ends_at=$4 AND status='confirmed'",
+      "UPDATE buqfit.resource_allocations SET status='released' WHERE order_id=$1 AND service_date=$2 AND starts_at=$3 AND ends_at=$4 AND status='confirmed'",
       [
         occurrence.order_id,
         occurrence.service_date,
@@ -1339,26 +1339,26 @@ export async function cancelOccurrence(input: {
     );
     if (occurrence.class_session_id) {
       await client.query(
-        "UPDATE bookfit.seat_allocations SET status='released' WHERE order_id=$1 AND class_session_id=$2 AND status='confirmed'",
+        "UPDATE buqfit.seat_allocations SET status='released' WHERE order_id=$1 AND class_session_id=$2 AND status='confirmed'",
         [occurrence.order_id, occurrence.class_session_id],
       );
     }
     const remaining = await client.query(
-      "SELECT 1 FROM bookfit.booking_occurrences WHERE order_id=$1 AND status='confirmed' LIMIT 1",
+      "SELECT 1 FROM buqfit.booking_occurrences WHERE order_id=$1 AND status='confirmed' LIMIT 1",
       [occurrence.order_id],
     );
     if (!remaining.rowCount) {
       await client.query(
-        "UPDATE bookfit.orders SET status='cancelled',updated_at=now() WHERE id=$1",
+        "UPDATE buqfit.orders SET status='cancelled',updated_at=now() WHERE id=$1",
         [occurrence.order_id],
       );
       await client.query(
-        "UPDATE bookfit.gym_entitlements SET status='released' WHERE order_id=$1 AND status='consumed'",
+        "UPDATE buqfit.gym_entitlements SET status='released' WHERE order_id=$1 AND status='consumed'",
         [occurrence.order_id],
       );
     }
     await client.query(
-      `INSERT INTO bookfit.audit_events(actor_id,action,entity_kind,entity_id,metadata)
+      `INSERT INTO buqfit.audit_events(actor_id,action,entity_kind,entity_id,metadata)
        VALUES($1,'occurrence.cancelled','booking_occurrence',$2,'{}')`,
       [input.actor.actorId, occurrence.id],
     );
@@ -1378,7 +1378,7 @@ export async function joinWaitlist(input: {
     await lockBookingState(client);
     await expireStaleHolds(client);
     const session = await client.query<{ id: string; capacity: number }>(
-      "SELECT id,capacity FROM bookfit.class_sessions WHERE id=$1",
+      "SELECT id,capacity FROM buqfit.class_sessions WHERE id=$1",
       [input.classSessionId],
     );
     if (!session.rowCount)
@@ -1390,8 +1390,8 @@ export async function joinWaitlist(input: {
         "invalid_seats",
       );
     const used = await client.query<{ seats: string | number }>(
-      `SELECT COALESCE(sum(sa.seats),0) AS seats FROM bookfit.seat_allocations sa
-        JOIN bookfit.orders o ON o.id=sa.order_id WHERE sa.class_session_id=$1
+      `SELECT COALESCE(sum(sa.seats),0) AS seats FROM buqfit.seat_allocations sa
+        JOIN buqfit.orders o ON o.id=sa.order_id WHERE sa.class_session_id=$1
          AND (sa.status='confirmed' AND o.status='paid' OR sa.status='held' AND o.status='pending')`,
       [input.classSessionId],
     );
@@ -1403,9 +1403,9 @@ export async function joinWaitlist(input: {
       );
     }
     const entry = await client.query<{ id: string }>(
-      `INSERT INTO bookfit.waitlist_entries(client_actor_id,class_session_id,seats,status)
+      `INSERT INTO buqfit.waitlist_entries(client_actor_id,class_session_id,seats,status)
        VALUES($1,$2,$3,'waiting') ON CONFLICT (client_actor_id,class_session_id) WHERE status='waiting'
-       DO UPDATE SET seats=GREATEST(bookfit.waitlist_entries.seats,EXCLUDED.seats) RETURNING id`,
+       DO UPDATE SET seats=GREATEST(buqfit.waitlist_entries.seats,EXCLUDED.seats) RETURNING id`,
       [input.actor.actorId, input.classSessionId, input.seats],
     );
     return { entryId: entry.rows[0].id, status: "waiting" };
