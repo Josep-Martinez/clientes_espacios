@@ -53,6 +53,7 @@ const child = spawn(
     cwd: process.cwd(),
     env: process.env,
     stdio: "inherit",
+    shell: process.platform === "win32",
   },
 );
 

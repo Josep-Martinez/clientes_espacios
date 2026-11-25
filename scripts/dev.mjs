@@ -8,6 +8,7 @@ if (!existsSync(".env.local")) {
   const setup = spawnSync(pnpmCommand, ["local:env"], {
     cwd: process.cwd(),
     env: process.env,
+    shell: process.platform === "win32",
     stdio: "inherit",
   });
   if (setup.status !== 0) {
@@ -73,6 +74,7 @@ const children = scripts.map((script) =>
     cwd: process.cwd(),
     stdio: "inherit",
     env: process.env,
+    shell: process.platform === "win32",
   }),
 );
 

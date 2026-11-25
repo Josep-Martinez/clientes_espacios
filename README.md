@@ -29,6 +29,8 @@ pnpm dev
 
 `db reset --local` aplica las migraciones de `supabase/migrations/` y carga `supabase/seed.sql`. Al ejecutar `pnpm dev` por primera vez, BookFit crea automáticamente `.env.local` si falta: genera una contraseña aleatoria para el rol SQL de ejecución `bookfit_runtime` y guarda la URL solo en ese archivo, ignorado por Git y con permisos de solo propietario. La credencial administrativa de migración se usa únicamente para configurar ese rol y no se guarda en el archivo. No copies credenciales de Supabase a variables `VITE_*`.
 
+La generación de `.env.local` usa la biblioteca `pg` del proyecto; no hace falta instalar `psql` en el ordenador.
+
 La API y Vite se enlazan a `127.0.0.1`. Abre <http://127.0.0.1:5173>. El selector local permite probar clientes, profesionales, gestores y una cuenta con doble rol, sin registro.
 
 El proyecto Supabase local tiene el identificador `bookfit-v1-local` y puertos propios. `pnpm local:start` crea o valida una red Docker con publicación de puertos limitada a `127.0.0.1` y luego ejecuta `pnpm exec supabase start --network-id bookfit-local`. Así no comparte los nombres de contenedor ni los puertos de otra instancia local del repositorio. No ejecutes `supabase link`, `db push` ni comandos contra Supabase Cloud en esta fase.

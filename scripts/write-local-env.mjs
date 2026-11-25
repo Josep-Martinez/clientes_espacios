@@ -13,6 +13,7 @@ const status = spawnSync(
   {
     cwd: process.cwd(),
     encoding: "utf8",
+    shell: process.platform === "win32",
     stdio: ["ignore", "pipe", "pipe"],
   },
 );
@@ -49,13 +50,14 @@ const client = new Client({
 try {
   await client.connect();
   const { rows } = await client.query(
-    "SELECT format('ALTER ROLE %I WITH LOGIN PASSWORD %L', $1, $2) AS command",
+    "SELECT format('ALTER ROLE %I WITH LOGIN PASSWORD %L', $1::text, $2::text) AS command",
     ["bookfit_runtime", password],
   );
   await client.query(rows[0].command);
-} catch {
+} catch (error) {
+  const detail = error instanceof Error ? ` ${error.message}` : "";
   process.stderr.write(
-    "No se pudo configurar la credencial de ejecución bookfit_runtime. Comprueba que la migración ya se aplicó.\n",
+    `No se pudo configurar la credencial de ejecución bookfit_runtime.${detail} Comprueba que la migración ya se aplicó.\n`,
   );
   process.exitCode = 1;
 } finally {

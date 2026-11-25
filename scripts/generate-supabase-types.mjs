@@ -23,6 +23,7 @@ const result = spawnSync(
     encoding: "utf8",
     env: { ...process.env, SUPABASE_TELEMETRY_DISABLED: "1" },
     maxBuffer: 20 * 1024 * 1024,
+    shell: process.platform === "win32",
   },
 );
 
