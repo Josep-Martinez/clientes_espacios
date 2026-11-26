@@ -2,13 +2,18 @@ import { randomBytes } from "node:crypto";
 import { chmod, writeFile } from "node:fs/promises";
 import { spawnSync } from "node:child_process";
 import { resolve } from "node:path";
+import pg from "pg";
+
+const { Client } = pg;
+const pnpmCommand = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
 
 const status = spawnSync(
-  "pnpm",
+  pnpmCommand,
   ["exec", "supabase", "status", "--output", "env"],
   {
     cwd: process.cwd(),
     encoding: "utf8",
+    shell: process.platform === "win32",
     stdio: ["ignore", "pipe", "pipe"],
   },
 );
@@ -37,23 +42,29 @@ if (!["127.0.0.1", "localhost", "::1", "[::1]"].includes(adminUrl.hostname)) {
 }
 
 const password = randomBytes(32).toString("hex");
-const configured = spawnSync(
-  "psql",
-  [
-    adminUrl.toString(),
-    "-v",
-    "ON_ERROR_STOP=1",
-    "-c",
-    `ALTER ROLE bookfit_runtime WITH LOGIN PASSWORD '${password}'`,
-  ],
-  { encoding: "utf8", stdio: ["ignore", "ignore", "pipe"] },
-);
-if (configured.status !== 0) {
-  process.stderr.write(
-    "No se pudo configurar la credencial de ejecución bookfit_runtime. Comprueba que la migración ya se aplicó.\n",
+const client = new Client({
+  connectionString: adminUrl.toString(),
+  connectionTimeoutMillis: 5_000,
+});
+
+try {
+  await client.connect();
+  const { rows } = await client.query(
+    "SELECT format('ALTER ROLE %I WITH LOGIN PASSWORD %L', $1::text, $2::text) AS command",
+    ["bookfit_runtime", password],
   );
-  process.exit(configured.status ?? 1);
+  await client.query(rows[0].command);
+} catch (error) {
+  const detail = error instanceof Error ? ` ${error.message}` : "";
+  process.stderr.write(
+    `No se pudo configurar la credencial de ejecución bookfit_runtime.${detail} Comprueba que la migración ya se aplicó.\n`,
+  );
+  process.exitCode = 1;
+} finally {
+  await client.end().catch(() => {});
 }
+
+if (process.exitCode) process.exit();
 
 const runtimeUrl = new URL(migrationUrl);
 runtimeUrl.username = "bookfit_runtime";
