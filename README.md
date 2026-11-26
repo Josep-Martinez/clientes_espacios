@@ -9,13 +9,28 @@ Consulta el [plan funcional y técnico de BookFit](docs/implementacion/PLAN_BOOK
 ## Requisitos
 
 - Node.js 20.19 o posterior.
-- pnpm 12.15 o compatible.
-- Docker Desktop iniciado.
-- Puerto 55432 disponible para PostgreSQL local.
+- pnpm 12.15.0 (la versión está fijada en `package.json`).
+- Docker Desktop instalado y arrancado (o Docker Engine en Linux).
+- Puertos locales disponibles: PostgreSQL `55432`, API `3001` y web `5173`.
+
+Instala Node.js y Docker Desktop para tu sistema operativo. Después instala pnpm 12.15.0. Si tu instalación de Node incluye Corepack:
+
+```bash
+corepack enable
+corepack prepare pnpm@12.15.0 --activate
+```
+
+Si `corepack` no está disponible, instala pnpm con `npm install --global pnpm@12.15.0`. Comprueba que Docker está activo con `docker info` y que las herramientas están disponibles:
+
+```bash
+node --version
+pnpm --version
+docker --version
+```
 
 ## Instalación y primer arranque
 
-Desde la raíz del repositorio:
+Clona el repositorio, abre una terminal en su carpeta raíz y ejecuta:
 
 ```bash
 pnpm install --frozen-lockfile
@@ -25,42 +40,76 @@ pnpm local:env
 pnpm dev
 ```
 
-`pnpm dev` reutiliza la API o la web de BookFit si ya están sanas en los puertos configurados. Si ambos servicios ya estaban activos, vuelve al prompt y los deja disponibles; para cerrarlos, usa el terminal donde arrancaron esos procesos.
+El primer `pnpm local:start` descarga las imágenes necesarias de Supabase y puede tardar varios minutos. Este comando prepara la red Docker local y ejecuta la CLI del proyecto con `supabase start`. Usa este comando para iniciar la base: así BookFit publica PostgreSQL solo en `127.0.0.1` y usa sus puertos propios. No hace falta instalar Supabase CLI ni `psql` globalmente.
 
-`db reset --local` aplica las migraciones de `supabase/migrations/` y carga `supabase/seed.sql`. Al ejecutar `pnpm dev` por primera vez, BookFit crea automáticamente `.env.local` si falta: genera una contraseña aleatoria para el rol SQL de ejecución `bookfit_runtime` y guarda la URL solo en ese archivo, ignorado por Git y con permisos de solo propietario. La credencial administrativa de migración se usa únicamente para configurar ese rol y no se guarda en el archivo. No copies credenciales de Supabase a variables `VITE_*`.
+`db reset --local` aplica las migraciones de `supabase/migrations/` y carga `supabase/seed.sql`. `pnpm local:env` genera `.env.local`: crea una contraseña aleatoria para el rol SQL de ejecución `bookfit_runtime`, guarda la URL solo en ese archivo (ignorado por Git y con permisos de solo propietario) y configura el rol mediante la biblioteca `pg` del proyecto. La credencial administrativa de migración no se guarda en el archivo. No copies credenciales a variables `VITE_*`.
 
-La API y Vite se enlazan a `127.0.0.1`. Abre <http://127.0.0.1:5173>. El selector local permite probar clientes, profesionales, gestores y una cuenta con doble rol, sin registro.
+El paso `pnpm local:env` es necesario tras el primer reset porque el reset recrea los roles de la base. En el primer arranque, `pnpm dev` también genera `.env.local` automáticamente si falta; se recomienda ejecutar el paso explícito para que quede claro cuándo se configura la conexión de la API.
 
-El proyecto Supabase local tiene el identificador `bookfit-v1-local` y puertos propios. `pnpm local:start` crea o valida una red Docker con publicación de puertos limitada a `127.0.0.1` y luego ejecuta `pnpm exec supabase start --network-id bookfit-local`. Así no comparte los nombres de contenedor ni los puertos de otra instancia local del repositorio. No ejecutes `supabase link`, `db push` ni comandos contra Supabase Cloud en esta fase.
+Cuando la terminal muestre que Vite y la API están disponibles, abre <http://127.0.0.1:5173>. La API está en <http://127.0.0.1:3001>. El selector local permite probar clientes, profesionales, gestores y una cuenta con doble rol, sin registro.
 
-## Uso habitual
+El proyecto local tiene el identificador `bookfit-v1-local`. `pnpm local:start` crea o valida la red Docker `bookfit-local` con publicación de puertos limitada a loopback y luego ejecuta `pnpm exec supabase start --network-id bookfit-local`. Por eso se recomienda usar `pnpm local:start` en lugar de ejecutar `supabase start` globalmente: usa la CLI fijada por el proyecto y la red local esperada. No ejecutes `supabase link`, `db push` ni comandos contra Supabase Cloud para el desarrollo local.
+
+## Iniciar cada día
+
+Abre una terminal en la carpeta raíz. Primero inicia o reanuda Supabase local:
 
 ```bash
 pnpm local:start
+```
+
+No borra ni reinicia la base; conserva reservas, perfiles y datos locales. Si la base ya está activa, el comando la reutiliza. Luego, en esa misma terminal o en otra terminal abierta en la raíz del proyecto, inicia BookFit:
+
+```bash
 pnpm dev
 ```
 
-Para reconstruir la base local desde las migraciones y regenerar los datos semilla de BookFit:
+Mantén esa terminal abierta mientras uses la aplicación. Detén la aplicación con `Ctrl+C`. Supabase puede quedarse en ejecución. Para parar también la base sin borrar sus datos, abre otra terminal en la raíz y ejecuta:
+
+```bash
+pnpm exec supabase stop
+```
+
+La próxima vez, vuelve a ejecutar `pnpm local:start` y `pnpm dev`. No hace falta reinstalar dependencias, volver a ejecutar `db reset` ni regenerar `.env.local` en el uso diario.
+
+## Abrir la base de datos local
+
+La aplicación usa PostgreSQL local en `127.0.0.1:55432`. Puedes conectarte con un cliente gráfico PostgreSQL como DBeaver, pgAdmin, TablePlus o similar usando estos datos:
+
+| Campo         | Valor       |
+| ------------- | ----------- |
+| Tipo          | PostgreSQL  |
+| Host          | `127.0.0.1` |
+| Puerto        | `55432`     |
+| Base de datos | `postgres`  |
+| Usuario       | `postgres`  |
+| Contraseña    | `postgres`  |
+| SSL           | Desactivado |
+
+Inicia antes Supabase con `pnpm local:start`; el cliente gráfico no puede conectarse si la base está detenida. Las tablas de BookFit están en el esquema `bookfit`. Para inspeccionar la base con permisos de administrador, usa la conexión anterior. La API usa el usuario restringido `bookfit_runtime`; su URL y contraseña se guardan en `.env.local` y no se deben copiar ni compartir.
+
+También puedes ver el estado de los servicios con:
+
+```bash
+pnpm exec supabase status
+```
+
+## Migraciones, datos y reinicios
+
+Para aplicar migraciones pendientes y conservar los datos actuales:
+
+```bash
+pnpm exec supabase migration up --local
+```
+
+Para reconstruir la base desde cero y volver a cargar los datos de ejemplo:
 
 ```bash
 pnpm exec supabase db reset --local
 pnpm local:env
 ```
 
-El reset borra los datos locales. Si quieres aplicar solo migraciones pendientes y conservar los datos actuales, usa:
-
-```bash
-pnpm exec supabase migration up --local
-```
-
-El reset elimina los datos de la base local. No lo ejecutes si quieres conservar las reservas y datos actuales. Si ya existía `.env.local`, el reset también elimina el rol SQL que contiene; después del reset vuelve a ejecutar `pnpm local:env` una vez antes de `pnpm dev`.
-
-Para reiniciar solo la aplicación, detén `pnpm dev` con `Ctrl+C` y vuelve a iniciarlo. PostgreSQL conserva las reservas pagadas. Para detener y reanudar Supabase sin resetear la base:
-
-```bash
-pnpm exec supabase stop
-pnpm local:start
-```
+**`db reset` elimina todos los datos locales**, incluidas reservas y cambios hechos desde la interfaz, y recrea los roles SQL. Úsalo solo cuando quieras empezar desde cero. Después del reset vuelve a ejecutar `pnpm local:env` antes de iniciar la API. Reiniciar solo `pnpm dev` no borra datos.
 
 ## Comprobaciones
 

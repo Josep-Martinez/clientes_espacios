@@ -1,6 +1,7 @@
 import { spawn, spawnSync } from "node:child_process";
 
 const networkName = "bookfit-local";
+const pnpmCommand = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
 const inspect = spawnSync("docker", ["network", "inspect", networkName], {
   encoding: "utf8",
   stdio: ["ignore", "pipe", "pipe"],
@@ -46,12 +47,13 @@ if (inspect.status !== 0) {
 }
 
 const child = spawn(
-  "pnpm",
+  pnpmCommand,
   ["exec", "supabase", "start", "--network-id", networkName],
   {
     cwd: process.cwd(),
     env: process.env,
     stdio: "inherit",
+    shell: process.platform === "win32",
   },
 );
 

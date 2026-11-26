@@ -5,8 +5,9 @@ import prettier from "prettier";
 
 const target = resolve("src/types/database.types.ts");
 const checkOnly = process.argv.includes("--check");
+const pnpmCommand = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
 const result = spawnSync(
-  "pnpm",
+  pnpmCommand,
   [
     "exec",
     "supabase",
@@ -22,6 +23,7 @@ const result = spawnSync(
     encoding: "utf8",
     env: { ...process.env, SUPABASE_TELEMETRY_DISABLED: "1" },
     maxBuffer: 20 * 1024 * 1024,
+    shell: process.platform === "win32",
   },
 );
 
