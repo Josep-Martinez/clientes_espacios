@@ -2,6 +2,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type FormEvent,
 } from "react";
@@ -21,8 +22,17 @@ import {
   type Space,
   type SpaceMetrics,
 } from "./api/bookfit.ts";
+import type { CalendarDateRange } from "./domain/calendar.ts";
+import { AgendaView } from "./views/AgendaView.tsx";
+import { HowItWorksView } from "./views/HowItWorksView.tsx";
 
-type Page = "explore" | "agenda" | "professional" | "spaces" | "requests";
+type Page =
+  | "explore"
+  | "agenda"
+  | "professional"
+  | "spaces"
+  | "requests"
+  | "how-it-works";
 type Feedback = { kind: "success" | "error" | "info"; message: string } | null;
 
 const BOOKING_MODES = [
@@ -177,32 +187,40 @@ export default function App() {
   const [busy, setBusy] = useState(false);
   const [feedback, setFeedback] = useState<Feedback>(null);
   const [agenda, setAgenda] = useState<AgendaEvent[]>([]);
+  const agendaRangeRequest = useRef(0);
   const [requests, setRequests] = useState<InformationRequest[]>([]);
   const [checkout, setCheckout] = useState<Checkout | null>(null);
 
+  const loadAgendaRange = useCallback(async (from: string, to: string) => {
+    const requestId = agendaRangeRequest.current + 1;
+    agendaRangeRequest.current = requestId;
+    const result = await bookfitApi.get<
+      AgendaEvent[] | { items?: AgendaEvent[] }
+    >(`/agenda?from=${from}&to=${to}`);
+    if (agendaRangeRequest.current === requestId)
+      setAgenda(selectedData(result));
+  }, []);
+
   const refreshAccount = useCallback(
-    async (currentActor: BookFitActor | null) => {
+    async (currentActor: BookFitActor | null, range?: CalendarDateRange) => {
       if (!currentActor) {
+        agendaRangeRequest.current += 1;
         setAgenda([]);
         setRequests([]);
         return;
       }
-      const from = startOfToday();
-      const to = dateAfter(90);
-      const [agendaResult, requestResult] = await Promise.allSettled([
-        bookfitApi.get<AgendaEvent[] | { items?: AgendaEvent[] }>(
-          `/agenda?from=${from}&to=${to}`,
-        ),
+      const from = range?.from ?? startOfToday();
+      const to = range?.to ?? dateAfter(90);
+      const [, requestResult] = await Promise.allSettled([
+        loadAgendaRange(from, to),
         bookfitApi.get<
           InformationRequest[] | { requests?: InformationRequest[] }
         >(`/information-requests`),
       ]);
-      if (agendaResult.status === "fulfilled")
-        setAgenda(selectedData(agendaResult.value));
       if (requestResult.status === "fulfilled")
         setRequests(selectedData(requestResult.value));
     },
-    [],
+    [loadAgendaRange],
   );
 
   const refreshCatalog = useCallback(async (query = "") => {
@@ -308,6 +326,7 @@ export default function App() {
     setBusy(true);
     try {
       await bookfitApi.delete("/dev/session");
+      agendaRangeRequest.current += 1;
       setActor(null);
       setAgenda([]);
       setRequests([]);
@@ -327,8 +346,8 @@ export default function App() {
     }
   }
 
-  async function reloadAccount(): Promise<void> {
-    await refreshAccount(actor);
+  async function reloadAccount(range?: CalendarDateRange): Promise<void> {
+    await refreshAccount(actor, range);
     await refreshCatalog();
   }
 
@@ -400,6 +419,13 @@ export default function App() {
               )}
             </button>
           )}
+          <button
+            aria-current={page === "how-it-works" ? "page" : undefined}
+            onClick={() => setPage("how-it-works")}
+            type="button"
+          >
+            Cómo funciona
+          </button>
         </nav>
         <button
           aria-label={
@@ -464,9 +490,10 @@ export default function App() {
               />
             )}
             {page === "agenda" && actor && (
-              <AgendaPage
+              <AgendaView
                 actor={actor}
                 agenda={agenda}
+                onLoadRange={loadAgendaRange}
                 onRefresh={reloadAccount}
                 onFeedback={setFeedback}
               />
@@ -493,6 +520,7 @@ export default function App() {
                 onFeedback={setFeedback}
               />
             )}
+            {page === "how-it-works" && <HowItWorksView />}
           </>
         )}
       </main>
@@ -1438,261 +1466,6 @@ function ExplorePage({
         </section>
       )}
     </div>
-  );
-}
-
-function AgendaPage({
-  actor,
-  agenda,
-  onRefresh,
-  onFeedback,
-}: {
-  actor: BookFitActor;
-  agenda: AgendaEvent[];
-  onRefresh: () => Promise<void>;
-  onFeedback: (feedback: Feedback) => void;
-}) {
-  const [sendingFor, setSendingFor] = useState<{
-    occurrenceId: string;
-    kind: "client" | "space_manager";
-  } | null>(null);
-  const [body, setBody] = useState("");
-  const [busyId, setBusyId] = useState<string | null>(null);
-  const sorted = [...agenda].sort(
-    (a, b) => a.date.localeCompare(b.date) || a.start.localeCompare(b.start),
-  );
-
-  async function cancel(event: AgendaEvent): Promise<void> {
-    if (
-      !window.confirm(`¿Cancelar solo la sesión del ${formatDate(event.date)}?`)
-    )
-      return;
-    setBusyId(event.occurrenceId);
-    try {
-      await bookfitApi.post(`/occurrences/${event.occurrenceId}/cancel`, {});
-      onFeedback({
-        kind: "success",
-        message:
-          "Se canceló esa fecha. Las demás sesiones de la serie permanecen.",
-      });
-      await onRefresh();
-    } catch (error) {
-      onFeedback({
-        kind: "error",
-        message:
-          error instanceof Error ? error.message : "No se pudo cancelar.",
-      });
-    } finally {
-      setBusyId(null);
-    }
-  }
-
-  async function sendRequest(event: AgendaEvent): Promise<void> {
-    if (!sendingFor) return;
-    setBusyId(event.occurrenceId);
-    try {
-      await bookfitApi.post("/information-requests", {
-        bookingOccurrenceId: sendingFor.occurrenceId,
-        recipientKind: sendingFor.kind,
-        body: body.trim(),
-      });
-      onFeedback({
-        kind: "success",
-        message:
-          "Solicitud enviada. El destinatario podrá leerla desde Solicitudes.",
-      });
-      setSendingFor(null);
-      setBody("");
-      await onRefresh();
-    } catch (error) {
-      onFeedback({
-        kind: "error",
-        message:
-          error instanceof Error
-            ? error.message
-            : "No se pudo enviar la solicitud.",
-      });
-    } finally {
-      setBusyId(null);
-    }
-  }
-
-  const canSendRequest = hasRole(actor, "professional");
-  return (
-    <section className="bf-page bf-agenda-page">
-      <div className="bf-page-hero">
-        <div>
-          <span className="bf-kicker">TU ACTIVIDAD</span>
-          <h1>Agenda</h1>
-          <p>
-            Las sesiones que puedes consultar según tu perfil. La información
-            privada de otros participantes no se muestra.
-          </p>
-        </div>
-        <div className="bf-agenda-count">
-          <strong>
-            {sorted.filter((event) => event.status === "confirmed").length}
-          </strong>
-          <span>sesiones confirmadas</span>
-        </div>
-      </div>
-      {!sorted.length ? (
-        <div className="bf-empty bf-empty-large">
-          <strong>Aún no hay sesiones en tu agenda.</strong>
-          <span>
-            Cuando una reserva se confirme, aparecerá aquí y seguirá guardada
-            tras reiniciar BookFit.
-          </span>
-        </div>
-      ) : (
-        <div className="bf-agenda-list">
-          {sorted.map((event) => (
-            <article className="bf-agenda-card" key={event.occurrenceId}>
-              <div className="bf-agenda-date">
-                <strong>{new Date(`${event.date}T12:00:00`).getDate()}</strong>
-                <span>
-                  {new Intl.DateTimeFormat("es-ES", { month: "short" }).format(
-                    new Date(`${event.date}T12:00:00`),
-                  )}
-                </span>
-                <small>{formatDate(event.date)}</small>
-              </div>
-              <div className="bf-agenda-main">
-                <div className="bf-agenda-title">
-                  <div>
-                    <span className="bf-kicker">
-                      {event.status === "confirmed"
-                        ? "CONFIRMADA"
-                        : event.status === "cancelled"
-                          ? "CANCELADA"
-                          : "PENDIENTE"}
-                    </span>
-                    <h2>{event.serviceName}</h2>
-                  </div>
-                  <span className={`bf-status bf-status-${event.status}`}>
-                    {event.status === "confirmed"
-                      ? "Confirmada"
-                      : event.status === "cancelled"
-                        ? "Cancelada"
-                        : "Pendiente"}
-                  </span>
-                </div>
-                <div className="bf-agenda-facts">
-                  <span>
-                    ◷ {formatTime(event.start)}–{formatTime(event.end)}
-                  </span>
-                  <span>◉ {event.professionalName}</span>
-                  {event.spaceName && <span>◇ {event.spaceName}</span>}
-                  <span>
-                    {event.seats} plaza{event.seats === 1 ? "" : "s"}
-                  </span>
-                </div>
-                {hasRole(actor, "client") &&
-                  event.clientActorId === actor.actorId && (
-                    <p className="bf-agenda-private">
-                      Cliente: {event.clientName}
-                    </p>
-                  )}
-                <div className="bf-agenda-actions">
-                  {event.status === "confirmed" &&
-                    event.clientActorId === actor.actorId && (
-                      <button
-                        className="bf-button bf-button-outline bf-small"
-                        disabled={busyId === event.occurrenceId}
-                        onClick={() => void cancel(event)}
-                        type="button"
-                      >
-                        Cancelar esta fecha
-                      </button>
-                    )}
-                  {canSendRequest &&
-                    event.status === "confirmed" &&
-                    event.professionalId === actor.professionalId && (
-                      <>
-                        <button
-                          className="bf-text-action"
-                          onClick={() => {
-                            setSendingFor({
-                              occurrenceId: event.occurrenceId,
-                              kind: "client",
-                            });
-                            setBody("");
-                          }}
-                          type="button"
-                        >
-                          Solicitar información al cliente
-                        </button>
-                        {event.spaceId && (
-                          <button
-                            className="bf-text-action"
-                            onClick={() => {
-                              setSendingFor({
-                                occurrenceId: event.occurrenceId,
-                                kind: "space_manager",
-                              });
-                              setBody("");
-                            }}
-                            type="button"
-                          >
-                            Solicitar al gestor del espacio
-                          </button>
-                        )}
-                      </>
-                    )}
-                </div>
-                {sendingFor?.occurrenceId === event.occurrenceId && (
-                  <form
-                    className="bf-request-composer"
-                    onSubmit={(submitEvent) => {
-                      submitEvent.preventDefault();
-                      void sendRequest(event);
-                    }}
-                  >
-                    <label htmlFor={`bf-request-${event.occurrenceId}`}>
-                      Solicitud para{" "}
-                      {sendingFor.kind === "client"
-                        ? event.clientName
-                        : "el gestor del espacio"}
-                    </label>
-                    <textarea
-                      id={`bf-request-${event.occurrenceId}`}
-                      maxLength={1200}
-                      minLength={1}
-                      onChange={(inputEvent) =>
-                        setBody(inputEvent.currentTarget.value)
-                      }
-                      placeholder="Escribe la información concreta que necesitas…"
-                      required
-                      value={body}
-                    />
-                    <div className="bf-request-actions">
-                      <small>
-                        {body.length}/1200 · solo texto, sin chat ni respuesta
-                        abierta
-                      </small>
-                      <button
-                        className="bf-button bf-button-primary bf-small"
-                        disabled={busyId === event.occurrenceId || !body.trim()}
-                        type="submit"
-                      >
-                        Enviar solicitud
-                      </button>
-                      <button
-                        className="bf-link-button"
-                        onClick={() => setSendingFor(null)}
-                        type="button"
-                      >
-                        Cancelar
-                      </button>
-                    </div>
-                  </form>
-                )}
-              </div>
-            </article>
-          ))}
-        </div>
-      )}
-    </section>
   );
 }
 
