@@ -27,6 +27,13 @@ export interface CalendarDay {
   isToday: boolean;
 }
 
+export type CalendarViewMode = "month" | "week" | "day";
+
+export interface CalendarDateRange {
+  from: string;
+  to: string;
+}
+
 export function getCalendarMonthGrid(
   year: number,
   monthIndex: number,
@@ -95,6 +102,66 @@ export function getCalendarWeekDays(
       isToday: currentDateKey === today,
     };
   });
+}
+
+export function getCalendarPeriodRange(
+  mode: CalendarViewMode,
+  selectedDate: string,
+): CalendarDateRange {
+  if (!isValidDateKey(selectedDate))
+    throw new RangeError("The selected date must be a valid YYYY-MM-DD date.");
+
+  if (mode === "day") return { from: selectedDate, to: selectedDate };
+  const selected = new Date(`${selectedDate}T12:00:00`);
+  const days =
+    mode === "week"
+      ? getCalendarWeekDays(selectedDate, selectedDate)
+      : getCalendarMonthGrid(
+          selected.getFullYear(),
+          selected.getMonth(),
+          selectedDate,
+        );
+
+  return { from: days[0].date, to: days[days.length - 1].date };
+}
+
+export function shiftCalendarDate(
+  selectedDate: string,
+  mode: CalendarViewMode,
+  amount: number,
+): string {
+  if (!isValidDateKey(selectedDate))
+    throw new RangeError("The selected date must be a valid YYYY-MM-DD date.");
+  if (!Number.isInteger(amount))
+    throw new RangeError("The calendar shift must be a whole number.");
+
+  const selected = new Date(`${selectedDate}T12:00:00`);
+  if (mode === "month") {
+    const dayOfMonth = selected.getDate();
+    const nextMonth = new Date(
+      selected.getFullYear(),
+      selected.getMonth() + amount,
+      1,
+      12,
+    );
+    const lastDay = new Date(
+      nextMonth.getFullYear(),
+      nextMonth.getMonth() + 1,
+      0,
+      12,
+    ).getDate();
+    return toLocalDateKey(
+      new Date(
+        nextMonth.getFullYear(),
+        nextMonth.getMonth(),
+        Math.min(dayOfMonth, lastDay),
+        12,
+      ),
+    );
+  } else {
+    selected.setDate(selected.getDate() + amount * (mode === "week" ? 7 : 1));
+  }
+  return toLocalDateKey(selected);
 }
 
 export function getAgendaEvents(

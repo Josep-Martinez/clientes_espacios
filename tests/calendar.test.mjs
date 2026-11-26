@@ -4,7 +4,9 @@ import {
   getAgendaEvents,
   getAgendaScope,
   getCalendarMonthGrid,
+  getCalendarPeriodRange,
   getCalendarWeekDays,
+  shiftCalendarDate,
 } from "../src/domain/calendar.ts";
 import { getNavigationItems } from "../src/domain/navigation.ts";
 
@@ -79,6 +81,34 @@ describe("calendar week view", () => {
       ],
     );
     assert.equal(days[5].isToday, true);
+  });
+});
+
+describe("calendar API query ranges", () => {
+  const today = "2026-11-21";
+
+  it("loads the full six-week month grid including adjacent dates", () => {
+    assert.deepEqual(getCalendarPeriodRange("month", today), {
+      from: "2026-10-26",
+      to: "2026-12-06",
+    });
+  });
+
+  it("loads only the visible week or selected day", () => {
+    assert.deepEqual(getCalendarPeriodRange("week", today), {
+      from: "2026-11-16",
+      to: "2026-11-22",
+    });
+    assert.deepEqual(getCalendarPeriodRange("day", today), {
+      from: today,
+      to: today,
+    });
+  });
+
+  it("moves by the selected period and clamps end-of-month dates", () => {
+    assert.equal(shiftCalendarDate("2026-01-31", "month", 1), "2026-02-28");
+    assert.equal(shiftCalendarDate("2026-11-21", "week", 1), "2026-11-28");
+    assert.equal(shiftCalendarDate("2026-11-21", "day", -1), "2026-11-20");
   });
 });
 
