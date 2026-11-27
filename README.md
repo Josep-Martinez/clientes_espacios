@@ -181,4 +181,4 @@ El check obligatorio `quality` arranca una base temporal en GitHub para cada act
 
 ## Despliegue futuro de migraciones
 
-Cuando exista un proyecto de producción, configura un workflow de despliegue separado que arranque tras integrar cambios en `main`. Conviene validar la revisión exacta que va a desplegarse, ensayar la migración primero en staging y serializar las ejecuciones de producción. Guarda las credenciales en el entorno protegido de GitHub y aplica las migraciones pendientes con la CLI fijada, sin incluir seeds de demo. El despliegue de la aplicación debe esperar a que la migración termine correctamente. Consulta la [guía de Supabase para separar entornos](https://supabase.com/docs/guides/deployment/managing-environments).
+Consulta la [guía de Supabase en producción](docs/implementacion/GUIA_SUPABASE_PRODUCCION.md) para preparar el proyecto Cloud, integrar Auth, configurar GitHub Actions y ensayar la recuperación antes del primer despliegue.
