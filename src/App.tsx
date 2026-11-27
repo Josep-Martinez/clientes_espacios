@@ -1582,6 +1582,32 @@ function ProfessionalPage({
           ) : (
             <>
               <div className="bf-field">
+                <label htmlFor="bf-training-approach">
+                  Enfoque de entrenamiento
+                </label>
+                <input
+                  id="bf-training-approach"
+                  maxLength={500}
+                  value={preferences.trainingApproach}
+                  onChange={(event) =>
+                    patch({ trainingApproach: event.currentTarget.value })
+                  }
+                />
+              </div>
+              <div className="bf-field">
+                <label htmlFor="bf-qualifications">
+                  Formación y certificaciones
+                </label>
+                <input
+                  id="bf-qualifications"
+                  maxLength={300}
+                  value={preferences.qualifications}
+                  onChange={(event) =>
+                    patch({ qualifications: event.currentTarget.value })
+                  }
+                />
+              </div>
+              <div className="bf-field">
                 <label htmlFor="bf-base-location">Ubicación base</label>
                 <select
                   id="bf-base-location"

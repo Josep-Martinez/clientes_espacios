@@ -2,6 +2,7 @@ name: BookFit quality gate
 
 on:
   pull_request:
+    types: [opened, synchronize, reopened, edited]
   push:
 
 permissions:
@@ -20,6 +21,26 @@ jobs:
       SUPABASE_TELEMETRY_DISABLED: "1"
 
     steps:
+      - name: Rellenar descripción del PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const body = (context.payload.pull_request.body ?? "")
+              .replace(/<!--[\s\S]*?(?:-->|$)/g, "");
+            const sections = body.split(/^##\s+/m);
+            const description = sections.find((section, index) =>
+              index > 0 && /^Descripción[ \t]*\r?\n/i.test(section)
+            );
+            const content = description?.replace(/^[^\n]*\n/, "") ?? "";
+            const text = content.split(/\r?\n/)
+              .filter((line) => !/^\s*#/.test(line))
+              .map((line) => line.replace(/^\s*[-*+]\s*\[[ xX]\]\s*/, ""))
+              .join(" ");
+            if (!/[\p{L}\p{N}]/u.test(text)) {
+              core.setFailed("Rellena la sección «Descripción» del PR con un resumen de los cambios.");
+            }
+
       - name: Checkout
         uses: actions/checkout@v4
 

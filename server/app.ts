@@ -620,6 +620,8 @@ export function createApp(pool: Pool, config: ServerConfig): FastifyInstance {
             maxRadiusKm: { type: "number", minimum: 0, maximum: 40 },
             maxTravelMinutes: { type: "integer", minimum: 0, maximum: 180 },
             bufferMinutes: { type: "integer", minimum: 0, maximum: 120 },
+            trainingApproach: { type: "string", maxLength: 500 },
+            qualifications: { type: "string", maxLength: 300 },
             modalities: {
               type: "array",
               minItems: 1,
@@ -642,6 +644,8 @@ export function createApp(pool: Pool, config: ServerConfig): FastifyInstance {
             maxTravelMinutes: number;
             bufferMinutes: number;
             modalities: BookingMode[];
+            trainingApproach?: string;
+            qualifications?: string;
           },
         ),
       ),
