@@ -45,6 +45,7 @@ jobs:
     timeout-minutes: 30
     env:
       SUPABASE_TELEMETRY_DISABLED: "1"
+      BOOKFIT_SUPABASE_NETWORK: supabase_network_bookfit-v1-local
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -67,7 +68,7 @@ jobs:
       - name: Start isolated local Supabase
         run: |
           log_file="$RUNNER_TEMP/bookfit-supabase-start.log"
-          if ! pnpm local:start >"$log_file" 2>&1; then
+          if ! pnpm exec supabase start >"$log_file" 2>&1; then
             sed -E \
               -e 's#(postgres(ql)?://)[^[:space:]]+#\1[REDACTED]#g' \
               -e 's/eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/[JWT_REDACTED]/g' \
@@ -89,6 +90,9 @@ jobs:
               "$log_file" | tail -n 80
             exit 1
           fi
+
+      - name: Esperar a Supabase Auth después del reset
+        run: curl --fail --silent --show-error --retry 15 --retry-connrefused --retry-delay 2 --max-time 5 http://127.0.0.1:55431/auth/v1/health > /dev/null
 
       - name: Configure local runtime credentials
         run: pnpm local:env
