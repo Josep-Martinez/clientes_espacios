@@ -1,46 +1,20 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { readFile } from "node:fs/promises";
 import { test } from "node:test";
 
-async function readLocalDatabaseUrl() {
-  if (process.env.BOOKFIT_TEST_DATABASE_URL)
-    return process.env.BOOKFIT_TEST_DATABASE_URL;
-  if (process.env.DATABASE_URL) return process.env.DATABASE_URL;
-  try {
-    const contents = await readFile(
-      new URL("../../.env.local", import.meta.url),
-      "utf8",
-    );
-    const line = contents
-      .split(/\r?\n/)
-      .find((item) => item.startsWith("DATABASE_URL="));
-    return line?.slice("DATABASE_URL=".length).trim() || null;
-  } catch {
-    return null;
-  }
-}
-
-const databaseUrl = await readLocalDatabaseUrl();
-const integrationRequired = process.env.BOOKFIT_REQUIRE_INTEGRATION === "true";
-let skipReason = databaseUrl
-  ? undefined
-  : "Requiere Supabase local y .env.local; no se encontró DATABASE_URL.";
-if (databaseUrl) {
-  try {
-    const host = new URL(databaseUrl).hostname.replace(/^\[|\]$/g, "");
-    if (!["127.0.0.1", "localhost", "::1"].includes(host))
-      skipReason =
-        "Las pruebas de integración solo admiten una base loopback local.";
-  } catch {
-    skipReason =
-      "BOOKFIT_TEST_DATABASE_URL no contiene una URL PostgreSQL válida.";
-  }
-}
-
-if (integrationRequired && skipReason) {
+const databaseUrl = process.env.BOOKFIT_TEST_DATABASE_URL ?? null;
+if (!databaseUrl)
   throw new Error(
-    `Las pruebas de integración son obligatorias, pero no pueden ejecutarse: ${skipReason}`,
+    "BOOKFIT_TEST_DATABASE_URL no está definida. Ejecuta `pnpm test:integration` para preparar una base local desechable.",
+  );
+const parsedTestUrl = new URL(databaseUrl);
+const testHost = parsedTestUrl.hostname.replace(/^\[|\]$/g, "");
+if (
+  !["postgres:", "postgresql:"].includes(parsedTestUrl.protocol) ||
+  !["127.0.0.1", "localhost", "::1"].includes(testHost)
+) {
+  throw new Error(
+    "Las pruebas de integración solo admiten una URL PostgreSQL en loopback.",
   );
 }
 
@@ -89,9 +63,7 @@ function nextProfessionalWorkdayOffset() {
 
 test(
   "BookFit API: permisos, solicitudes, pagos persistentes y concurrencia",
-  {
-    skip: integrationRequired ? undefined : skipReason,
-  },
+  { skip: false },
   async (t) => {
     const [{ Pool }, { createApp }] = await Promise.all([
       import("pg"),

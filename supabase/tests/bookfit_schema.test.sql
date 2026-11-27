@@ -1,7 +1,7 @@
 -- Run after the local migration and seed reset; all fixture writes are rolled back.
 BEGIN;
 
-SELECT plan(24);
+SELECT plan(28);
 
 SELECT ok(to_regnamespace('bookfit') IS NOT NULL, 'BookFit schema exists');
 SELECT ok(to_regclass('bookfit.actors') IS NOT NULL, 'actors table exists');
@@ -70,6 +70,10 @@ SELECT ok(
   'runtime role has no administrative database privileges'
 );
 SELECT ok(has_schema_privilege('bookfit_runtime', 'bookfit', 'USAGE'), 'runtime can use the BookFit schema');
+SELECT ok(NOT has_schema_privilege('anon', 'bookfit', 'USAGE'), 'anonymous API role cannot use the BookFit schema');
+SELECT ok(NOT has_schema_privilege('authenticated', 'bookfit', 'USAGE'), 'authenticated API role cannot use the BookFit schema');
+SELECT ok(NOT has_table_privilege('anon', 'bookfit.actors', 'SELECT'), 'anonymous API role cannot read BookFit actors');
+SELECT ok(NOT has_table_privilege('authenticated', 'bookfit.actors', 'SELECT'), 'authenticated API role cannot read BookFit actors');
 SELECT ok(has_table_privilege('bookfit_runtime', 'bookfit.actors', 'SELECT'), 'runtime can read actors');
 SELECT ok(NOT has_table_privilege('bookfit_runtime', 'bookfit.actors', 'UPDATE'), 'runtime cannot edit actor records');
 SELECT ok(has_table_privilege('bookfit_runtime', 'bookfit.orders', 'INSERT'), 'runtime can create orders');
