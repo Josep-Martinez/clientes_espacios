@@ -1,33 +1,5 @@
 #!/bin/sh
-set -eu
 
-if git diff --cached --quiet -- supabase/migrations; then
-  exit 0
+if ! git diff --cached --quiet -- supabase/migrations; then
+  printf '%s\n' 'Este commit cambia migraciones. El check quality validará el esquema y los tipos en GitHub.'
 fi
-
-if ! git diff --quiet -- supabase/migrations src/types/database.types.ts ||
-   [ -n "$(git ls-files --others --exclude-standard -- supabase/migrations)" ]; then
-  echo 'Prepara las migraciones y los tipos antes del commit. Hay cambios fuera del índice.' >&2
-  exit 1
-fi
-
-export SUPABASE_TELEMETRY_DISABLED=1
-if ! migrations=$(pnpm exec supabase migration list --local --output-format json); then
-  echo 'No se pudo comprobar el historial de Supabase local. Ejecuta pnpm local:start.' >&2
-  exit 1
-fi
-
-# Con --local, el campo remote representa el historial de la base local.
-if ! printf '%s\n' "$migrations" | node --input-type=module -e '
-  import { readFileSync } from "node:fs";
-  const { migrations } = JSON.parse(readFileSync(0, "utf8"));
-  if (!Array.isArray(migrations) || migrations.length === 0 ||
-      !migrations.every(({ local, remote }) => /^\d+$/.test(local) && local === remote)) {
-    process.exitCode = 1;
-  }
-'; then
-  echo 'El historial local no coincide. Aplica las migraciones locales y vuelve a generar los tipos.' >&2
-  exit 1
-fi
-
-pnpm supabase:types:check

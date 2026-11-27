@@ -173,12 +173,11 @@ Las migraciones locales se aplican con `supabase migration up --local` o se reco
 
 `BOOKFIT_DEV_PROFILES` y `BOOKFIT_PAYMENT_MODE=fake` solo se permiten en desarrollo. El servidor rechaza perfiles semilla o pagos falsos cuando `NODE_ENV=production`. No se capturan datos de tarjeta. El contrato del proveedor de pagos permite integrar Stripe más adelante; autenticación real se incorporará mediante identidades externas asociadas a los actores internos.
 
-## Comprobar tipos antes del commit
+## Migraciones en las ramas y los PR
 
-Activa el hook versionado una vez por clon con `git config --local core.hooksPath .githooks`.
-Si el commit incluye migraciones, el hook compara el historial de Supabase local con los archivos del repositorio y verifica los tipos que has preparado para el commit. Aplica primero las migraciones con `pnpm exec supabase migration up --local`, ejecuta `pnpm supabase:types` y añade al índice las migraciones y los tipos. Si una migración cambia solo permisos, es normal que el archivo generado quede idéntico.
+Puedes hacer commit y push con Supabase local apagado. Si has activado el hook con `git config --local core.hooksPath .githooks`, solo recibirás un recordatorio cuando el commit incluya migraciones.
 
-El historial local comprueba versiones. El check obligatorio `quality` reconstruye una base efímera a partir del contenido del PR y detecta diferencias incluso si alguien omite el hook o edita una migración ya aplicada.
+El check obligatorio `quality` arranca una base temporal en GitHub para cada actualización del PR y cada push a `main`, aplica las migraciones, regenera los tipos y compara el resultado con el archivo versionado. El PR muestra los resultados de «Rellenar descripción del PR» y «Migraciones, tipos y pruebas» por separado. El resultado obligatorio `quality` reúne ambos. Si los tipos difieren, el paso «Comprobar tipos de Supabase versionados» indica cómo resolverlo y el PR queda bloqueado. Para corregirlo, aplica las migraciones en Supabase local (o reconstruye tu base si es descartable), ejecuta `pnpm supabase:types` y sube el resultado en otro commit. Las migraciones que no cambian los tipos pueden pasar sin modificar el archivo generado.
 
 ## Despliegue futuro de migraciones
 
