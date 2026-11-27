@@ -9,7 +9,7 @@ BookFit conecta clientes que buscan sesiones o clases de bienestar con profesion
 
 El navegador se comunica únicamente con `/api`. Fastify resuelve la sesión, permisos por objeto, disponibilidad, precios, retenciones, reservas, pagos simulados, preferencias, métricas y solicitudes de información. PostgreSQL conserva las reservas y el historial de pago al reiniciar la aplicación. No se usa `localStorage` para el estado de negocio.
 
-El SDK `@supabase/supabase-js` y Supabase Auth quedan para una fase posterior. La migración ya contempla identidades externas vinculadas a actores internos. No se enlaza ni se modifica ningún proyecto de Supabase Cloud.
+Supabase Auth está habilitado solo en la pila local para validar registro, login y logout con un usuario temporal. No está conectado a las sesiones ni a los actores de la aplicación: BookFit conserva el selector de perfiles semilla con sesión Fastify. No se usa `@supabase/supabase-js` porque el navegador no llama a Supabase; las identidades futuras se enlazarán a actores mediante la tabla prevista. No se enlaza ni se modifica ningún proyecto de Supabase Cloud.
 
 ## 2. Perfiles semilla
 
@@ -72,9 +72,9 @@ La ruta de pago de prueba se habilita solo con la configuración local prevista 
 
 La migración crea el esquema privado `bookfit`, fuera de los esquemas expuestos por la Data API. Modela actores, roles, identidades futuras, sesiones de desarrollo, profesionales, preferencias, servicios, ubicaciones, espacios, horarios, clases, pedidos, retenciones, reservas, plazas, pagos, listas de espera, solicitudes y auditoría.
 
-La credencial administrativa se utiliza para las migraciones y la creación del rol de ejecución. La API usa el rol `bookfit_runtime`, cuya conexión real se guarda en `.env.local` ignorado por Git y no se envía al cliente. `.env.example` solo contiene valores de ejemplo. Los servicios de desarrollo se enlazan a `127.0.0.1`.
+La credencial administrativa se utiliza para las migraciones y la creación del rol de ejecución. La API usa el rol `bookfit_runtime`, cuya conexión real se guarda en `.env.local` ignorado por Git y no se envía al cliente. `.env.example` solo contiene valores de ejemplo. Los servicios de desarrollo se enlazan a `127.0.0.1`. La Data API solo expone `public` y `graphql_public`; el esquema `bookfit` está fuera de esa lista y no concede acceso a `anon` ni `authenticated`. No hay RLS porque el navegador no consulta esas tablas; si cambia ese límite, las políticas RLS serán requisito antes de exponerlas.
 
-Además de los permisos por objeto, la API aplica cookies de sesión `HttpOnly` y `SameSite`, CSRF y validación del origen en mutaciones, límites de frecuencia, límites de tamaño, cabeceras de seguridad y errores que no exponen SQL ni secretos. El acceso directo desde Supabase Auth o la Data API no forma parte de esta versión.
+Además de los permisos por objeto, la API aplica cookies de sesión `HttpOnly` y `SameSite`, CSRF y validación del origen en mutaciones, límites de frecuencia, límites de tamaño, cabeceras de seguridad y errores que no exponen SQL ni secretos. El smoke test `pnpm test:auth:local` usa las claves locales solo en memoria y elimina el usuario que crea; comprueba además que la API pública rechaza el esquema privado.
 
 Los datos, perfiles, comisiones y pagos son de prueba. No introduzcas datos personales, información sanitaria, credenciales reales de acceso a espacios ni datos financieros.
 
@@ -83,7 +83,7 @@ Los datos, perfiles, comisiones y pagos son de prueba. No introduzcas datos pers
 Desde la raíz del repositorio:
 
 ```bash
-pnpm install
+pnpm install --frozen-lockfile
 pnpm local:start
 pnpm exec supabase status
 pnpm exec supabase db reset --local
@@ -112,11 +112,11 @@ pnpm test:integration
 pnpm build
 ```
 
-Las pruebas de integración necesitan Supabase local arrancado, migraciones y semillas aplicadas, y `.env.local` generado. Cubren permisos, solicitudes, CSRF, idempotencia de pagos, reservas y concurrencia.
+Las pruebas de integración necesitan Supabase local arrancado, migraciones y semillas aplicadas, y `.env.local` generado. Crean una base temporal, no alteran las reservas de desarrollo, y cubren permisos, solicitudes, CSRF, idempotencia de pagos, reservas y concurrencia. `pnpm test:auth:local` valida el flujo local de Auth y que la clave pública no puede consultar `bookfit`.
 
 ## 7. Fuera del alcance de esta fase
 
-Quedan para iteraciones futuras Supabase Auth, identidades verificadas, pagos reales con Stripe, reembolsos y liquidaciones, políticas comerciales definitivas y despliegue público. Antes de operar con personas reales habrá que revisar privacidad, obligaciones legales, fiscalidad, seguridad y recuperación de copias.
+Quedan para iteraciones futuras la integración de Supabase Auth con sesiones y actores de BookFit, identidades verificadas, pagos reales con Stripe, reembolsos y liquidaciones, políticas comerciales definitivas y despliegue público. Staging y producción deberán usar proyectos y secretos separados, migraciones revisadas y sin seeds demo. Antes de operar con personas reales habrá que revisar privacidad, obligaciones legales, fiscalidad, seguridad y recuperación de copias.
 
 ---
 

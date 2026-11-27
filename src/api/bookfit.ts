@@ -156,6 +156,8 @@ export interface ProfessionalPreferences {
   maxRadiusKm: number;
   maxTravelMinutes: number;
   bufferMinutes: number;
+  trainingApproach: string;
+  qualifications: string;
   modalities: BookingMode[];
 }
 

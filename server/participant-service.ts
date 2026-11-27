@@ -200,8 +200,11 @@ export async function getProfessionalPreferences(
     max_travel_minutes: number;
     buffer_minutes: number;
     modalities: BookingMode[];
+    training_approach: string;
+    qualifications: string;
   }>(
-    `SELECT pp.base_location_id,pp.max_radius_km,pp.max_travel_minutes,pp.buffer_minutes,pp.modalities
+    `SELECT pp.base_location_id,pp.max_radius_km,pp.max_travel_minutes,pp.buffer_minutes,pp.modalities,
+            pp.training_approach,pp.qualifications
        FROM bookfit.professional_preferences pp JOIN bookfit.professionals p ON p.id=pp.professional_id
       WHERE p.actor_id=$1`,
     [actor.actorId],
@@ -219,6 +222,8 @@ export async function getProfessionalPreferences(
     maxTravelMinutes: row.max_travel_minutes,
     bufferMinutes: row.buffer_minutes,
     modalities: row.modalities,
+    trainingApproach: row.training_approach,
+    qualifications: row.qualifications,
   };
 }
 
@@ -231,6 +236,8 @@ export async function updateProfessionalPreferences(
     maxTravelMinutes: number;
     bufferMinutes: number;
     modalities: BookingMode[];
+    trainingApproach?: string;
+    qualifications?: string;
   },
 ): Promise<Record<string, unknown>> {
   if (!actor.roles.includes("professional") || !actor.professionalId)
@@ -259,7 +266,8 @@ export async function updateProfessionalPreferences(
   }
   const updated = await pool.query(
     `UPDATE bookfit.professional_preferences pp SET base_location_id=$2,max_radius_km=$3,max_travel_minutes=$4,
-         buffer_minutes=$5,modalities=$6::text[]
+         buffer_minutes=$5,modalities=$6::text[],
+         training_approach=COALESCE($7,pp.training_approach),qualifications=COALESCE($8,pp.qualifications)
        FROM bookfit.professionals p WHERE pp.professional_id=p.id AND p.actor_id=$1
        AND EXISTS(SELECT 1 FROM bookfit.locations l WHERE l.id=$2)`,
     [
@@ -269,6 +277,8 @@ export async function updateProfessionalPreferences(
       value.maxTravelMinutes,
       value.bufferMinutes,
       value.modalities,
+      value.trainingApproach?.trim() ?? null,
+      value.qualifications?.trim() ?? null,
     ],
   );
   if (!updated.rowCount)

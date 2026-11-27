@@ -13,10 +13,11 @@ const result = spawnSync(
     "supabase",
     "gen",
     "types",
-    "typescript",
     "--local",
     "--schema",
     "bookfit",
+    "--lang",
+    "typescript",
   ],
   {
     cwd: process.cwd(),

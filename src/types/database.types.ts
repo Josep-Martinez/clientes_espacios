@@ -765,6 +765,8 @@ export type Database = {
           max_travel_minutes: number;
           modalities: string[];
           professional_id: string;
+          qualifications: string;
+          training_approach: string;
         };
         ComputedFields: never;
         Insert: {
@@ -774,6 +776,8 @@ export type Database = {
           max_travel_minutes?: number;
           modalities?: string[];
           professional_id: string;
+          qualifications?: string;
+          training_approach?: string;
         };
         Update: {
           base_location_id?: string;
@@ -782,6 +786,8 @@ export type Database = {
           max_travel_minutes?: number;
           modalities?: string[];
           professional_id?: string;
+          qualifications?: string;
+          training_approach?: string;
         };
         Relationships: [
           {
