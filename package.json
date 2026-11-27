@@ -23,7 +23,7 @@
     "test": "node --disable-warning=ExperimentalWarning --experimental-strip-types --test tests/*.test.mjs",
     "test:integration": "node scripts/run-integration-tests.mjs",
     "test:auth:local": "node scripts/test-local-auth.mjs",
-    "test:db": "supabase test db --local",
+    "test:db": "supabase test db --local --network-id bookfit-local",
     "test:coverage": "node --disable-warning=ExperimentalWarning --experimental-strip-types --experimental-test-coverage --test-coverage-include='src/domain/**/*.ts' --test tests/*.test.mjs"
   },
   "dependencies": {

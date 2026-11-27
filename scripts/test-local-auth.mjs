@@ -6,8 +6,8 @@ import {
 
 const status = readLocalSupabaseStatus();
 const apiValue = status.API_URL ?? status.SUPABASE_URL;
-const publicKey = status.ANON_KEY ?? status.PUBLISHABLE_KEY;
-const publicAuthToken = status.ANON_KEY;
+const publicKey = status.PUBLISHABLE_KEY ?? status.ANON_KEY;
+const publicAuthToken = status.PUBLISHABLE_KEY ? null : status.ANON_KEY;
 const serviceKey = status.SERVICE_ROLE_KEY ?? status.SECRET_KEY;
 const serviceAuthToken = status.SERVICE_ROLE_KEY;
 if (!apiValue || !publicKey || !serviceKey) {
@@ -21,7 +21,7 @@ if (apiUrl.protocol !== "http:") {
 }
 
 const email = `bookfit-auth-${randomUUID()}@example.test`;
-const password = `Bf-${randomUUID()}-${randomUUID()}`;
+const password = `Bf-${randomUUID()}`;
 let userId;
 
 async function request(
@@ -30,6 +30,7 @@ async function request(
 ) {
   return fetch(new URL(path, apiUrl), {
     ...options,
+    redirect: "error",
     signal: AbortSignal.timeout(8_000),
     headers: {
       apikey: key,
@@ -72,7 +73,16 @@ try {
     body: JSON.stringify({ email, password }),
   });
   if (!signup.ok) {
-    throw new Error(`El registro local de Auth falló (HTTP ${signup.status}).`);
+    const error = await readJson(signup);
+    const code =
+      isRecord(error) &&
+      typeof error.error_code === "string" &&
+      /^[a-z_]{1,60}$/.test(error.error_code)
+        ? `, ${error.error_code}`
+        : "";
+    throw new Error(
+      `El registro local de Auth falló (HTTP ${signup.status}${code}).`,
+    );
   }
   const signupPayload = await readJson(signup);
   if (isRecord(signupPayload) && isRecord(signupPayload.user)) {

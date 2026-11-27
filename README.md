@@ -172,3 +172,14 @@ Las migraciones locales se aplican con `supabase migration up --local` o se reco
 ## Desarrollo posterior
 
 `BOOKFIT_DEV_PROFILES` y `BOOKFIT_PAYMENT_MODE=fake` solo se permiten en desarrollo. El servidor rechaza perfiles semilla o pagos falsos cuando `NODE_ENV=production`. No se capturan datos de tarjeta. El contrato del proveedor de pagos permite integrar Stripe más adelante; autenticación real se incorporará mediante identidades externas asociadas a los actores internos.
+
+## Comprobar tipos antes del commit
+
+Activa el hook versionado una vez por clon con `git config --local core.hooksPath .githooks`.
+Si el commit incluye migraciones, el hook compara el historial de Supabase local con los archivos del repositorio y verifica los tipos que has preparado para el commit. Aplica primero las migraciones con `pnpm exec supabase migration up --local`, ejecuta `pnpm supabase:types` y añade al índice las migraciones y los tipos. Si una migración cambia solo permisos, es normal que el archivo generado quede idéntico.
+
+El historial local comprueba versiones. El check obligatorio `quality` reconstruye una base efímera a partir del contenido del PR y detecta diferencias incluso si alguien omite el hook o edita una migración ya aplicada.
+
+## Despliegue futuro de migraciones
+
+Cuando exista un proyecto de producción, configura un workflow de despliegue separado que arranque tras integrar cambios en `main`. Conviene validar la revisión exacta que va a desplegarse, ensayar la migración primero en staging y serializar las ejecuciones de producción. Guarda las credenciales en el entorno protegido de GitHub y aplica las migraciones pendientes con la CLI fijada, sin incluir seeds de demo. El despliegue de la aplicación debe esperar a que la migración termine correctamente. Consulta la [guía de Supabase para separar entornos](https://supabase.com/docs/guides/deployment/managing-environments).
